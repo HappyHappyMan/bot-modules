@@ -590,3 +590,33 @@ def _handle_aamulehti(url):
 def _handle_apina(url):
     """http://apina.biz/*"""
     return None
+
+
+def _handle_reddit(url):
+    """*reddit.com/r/*/comments/*/*"""
+    import simplejson as json
+    if url[-1] != "/":
+        ending = "/.json"
+    else:
+        ending = ".json"
+    json_url = url + ending
+    content = urllib2.urlopen(json_url)
+    api_return = json.load(content)
+    if not content:
+        log.debug("No content received")
+        return
+    try:
+        data = api_return[0]['data']['children'][0]['data']
+        title = data['title']
+        ups = data['ups']
+        downs = data['downs']
+        score = ups - downs
+        num_comments = data['num_comments']
+        over_18 = data['over_18']
+        result = "%s - %dpts (%d up, %d down) - %d comments" % (title, score, ups, downs, num_comments)
+        if over_18 is True:
+            result = result + " (NSFW)"
+        return result
+    except Exception, e:
+        # parsing error, use default title
+        return
