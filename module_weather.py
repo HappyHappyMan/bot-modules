@@ -38,11 +38,11 @@ def command_weather(bot, user, channel, args):
         args = args.split(',')
         if len(args) > 1:
             construct = args[1].replace(' ', '', 1).replace(' ', '_') + "/" + args[0].replace(' ', '_')
-            print wunderurl % construct
-            data = urllib2.urlopen(wunderurl % settings["weather"]["key"], construct)
+            #print wunderurl % construct
+            data = urllib2.urlopen(wunderurl % (settings["weather"]["key"], construct))
         else:
-            print wunderurl % args[0]
-            data = urllib2.urlopen(wunderurl % settings["weather"]["key"], args[0])
+            #print wunderurl % args[0]
+            data = urllib2.urlopen(wunderurl % (settings["weather"]["key"], args[0]))
 
     jsondata = json.load(data)
 

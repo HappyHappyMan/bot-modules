@@ -65,46 +65,8 @@ def command_qadd(bot, user, channel, args):
     bot.say(channel, "Quote %s successfully written" % line_number)
 
 
-def command_qdel(bot, user, channel, args):
-    """Deletes quote from database. Goes by line number, only available to bot owner."""
-
-    if not isAdmin(user):
-        bot.say(user, "You are not authorized to perform this command.")
-        return
-    else:
-        try:
-            expldir = check_params(bot, args, channel)
-        except TypeError:
-            bot.say(channel, "this is the most wtf part of everything")
-            return
-
-        args = args.split(" ", 1)
-        if not args[0]:
-            bot.say(user, "Try again please")
-            return
-
-        try:
-            float(args[0])
-        except ValueError:
-            bot.say(user, "Try again please, this time with a number")
-            return
-        linecache.clearcache()
-        del_line = linecache.getline(os.path.join(expldir, "quotes.txt"), args[0])
-
-        f = open(os.path.join(expldir, "quotes.txt"), "r")
-        lines = f.readlines()
-        f.close()
-        f = open(os.path.join(expldir, "quotes.txt"), "w")
-        for line in lines:
-            if line != del_line:
-                f.write(line)
-        f.close()
-
-        bot.say(user, "Line successfully deleted")
-
-
 def command_quote(bot, user, channel, args):
-    """Returns a quote from the database. If you , returns random quote."""
+    """Returns a quote from the database. If you provide numeric argument, returns that number quote from the database. If you provide text arguments, searches db. If no arguments, returns random quote."""
 
     try:
         expldir = os.path.join(sys.path[0], "expl/qdb", channel)
@@ -139,6 +101,8 @@ def command_quote(bot, user, channel, args):
                     line_num = x
                     print "%s : %s" % (ratio, line_num)
             if ratio < 65:
+                bot.log("Input: %s | match ratio: %s" % (args, ratio))
+                bot.say(channel, "No matches found.")
                 return
             return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), line_num).strip("\n")
             bot.say(channel, "Quote %s/%s: " % (line_num, totlines) + return_line)
@@ -147,6 +111,6 @@ def command_quote(bot, user, channel, args):
 
     if int(argy[0]) <= totlines:
         linecache.clearcache()
-        return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), (int(args[0]))).strip("\n")
+        return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), (int(argy[0]))).strip("\n")
         bot.say(channel, "Quote %s/%s: " % (argy[0], totlines) + return_line)
         return
