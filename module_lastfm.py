@@ -118,7 +118,7 @@ def command_np(bot, user, channel, args):
 
 
 def command_compare(bot, user, channel, args):
-    DB = sqlite3.connect("/home/sri/lastfm.db3")
+    DB = sqlite3.connect(settings["lastfm"]["database"])
     COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=c20060e83c6efcaed3d2a8a618885eaf&limit=4"
     usersplit = user.split("!", 1)[0]
 
@@ -173,7 +173,7 @@ def command_compare(bot, user, channel, args):
 
 
 def command_charts(bot, user, channel, args):
-    DB = sqlite3.connect("/home/sri/lastfm.db3")
+    DB = sqlite3.connect(settings["lastfm"]["database"])
     usersplit = user.split("!", 1)[0]
     c = DB.cursor()
 
