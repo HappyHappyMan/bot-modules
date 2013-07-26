@@ -1,0 +1,59 @@
+K 25
+svn:wc:ra_dav:version-url
+V 41
+/svn/!svn/ver/313/trunk/modules/available
+END
+module_imgur.py
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/313/trunk/modules/available/module_imgur.py
+END
+module_pgsqlwanha.py
+K 25
+svn:wc:ra_dav:version-url
+V 62
+/svn/!svn/ver/313/trunk/modules/available/module_pgsqlwanha.py
+END
+module_nugget.py
+K 25
+svn:wc:ra_dav:version-url
+V 58
+/svn/!svn/ver/313/trunk/modules/available/module_nugget.py
+END
+module_ask.conf
+K 25
+svn:wc:ra_dav:version-url
+V 57
+/svn/!svn/ver/289/trunk/modules/available/module_ask.conf
+END
+module_sqliteseries.py
+K 25
+svn:wc:ra_dav:version-url
+V 64
+/svn/!svn/ver/313/trunk/modules/available/module_sqliteseries.py
+END
+module_ask.py
+K 25
+svn:wc:ra_dav:version-url
+V 55
+/svn/!svn/ver/313/trunk/modules/available/module_ask.py
+END
+module_sqlitewanha.py
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/313/trunk/modules/available/module_sqlitewanha.py
+END
+module_pgsqlseries.py
+K 25
+svn:wc:ra_dav:version-url
+V 63
+/svn/!svn/ver/313/trunk/modules/available/module_pgsqlseries.py
+END
+module_oraakkeli.py
+K 25
+svn:wc:ra_dav:version-url
+V 61
+/svn/!svn/ver/313/trunk/modules/available/module_oraakkeli.py
+END
