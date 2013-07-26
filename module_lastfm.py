@@ -119,7 +119,7 @@ def command_np(bot, user, channel, args):
 
 def command_compare(bot, user, channel, args):
     DB = sqlite3.connect(settings["lastfm"]["database"])
-    COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=c20060e83c6efcaed3d2a8a618885eaf&limit=4"
+    COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
     usersplit = user.split("!", 1)[0]
 
     c = DB.cursor()
@@ -143,7 +143,7 @@ def command_compare(bot, user, channel, args):
         return
     else:
         import math  # Yeah, yeah, whatever
-        call_url = COMPARE_URL % (lastid, yourid)
+        call_url = COMPARE_URL % (lastid, yourid, settings["lastfm"]["key"])
         xmlreturn = urllib2.urlopen(call_url)
         data = xmlreturn.read()
         xmlreturn.close()
@@ -191,7 +191,7 @@ def command_charts(bot, user, channel, args):
     c.close()
     DB.close()
 
-    call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=c20060e83c6efcaed3d2a8a618885eaf&limit=5&period=7day" % ("user.gettopartists", str(lastid))
+    call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=5&period=7day" % ("user.gettopartists", str(lastid), settings["lastfm"]["key"])
     xmlreturn = urllib2.urlopen(call_url)
     data = xmlreturn.read()
     xmlreturn.close()
