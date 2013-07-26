@@ -1,16 +1,27 @@
 # -*- coding: utf-8 -*-
 
-"""
-$Id: module_weather.py 313 2011-06-03 11:22:38Z henri@nerv.fi $
-$HeadURL: http://pyfibot.googlecode.com/svn/trunk/modules/module_weather.py $
-"""
+
 import urllib2
 import json
+import yaml
+import os
+
+
+def _import_yaml_data(directory=os.curdir):
+    if os.path.exists(directory):
+        settings_path = os.path.join(directory, "modules", "weather.settings")
+        return yaml.load(file(settings_path))
+    else:
+        print "Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file."
+        return
 
 
 def command_weather(bot, user, channel, args):
     """Gives weather for location. Enter a city or zipcode"""
-    wunderurl = "http://api.wunderground.com/api/551a8409f5038f1b/conditions/q/%s.json"
+
+    settings = _import_yaml_data()
+
+    wunderurl = "http://api.wunderground.com/api/%s/conditions/q/%s.json"
 
     weather_dict = {"Mostly Cloudy":"☁","Clear":"☼","Partly Cloudy":"☁","Light Drizzle":"☂"}
 
@@ -22,16 +33,16 @@ def command_weather(bot, user, channel, args):
             return False
 
     if is_number(args) is True:
-        data = urllib2.urlopen(wunderurl % args)
+        data = urllib2.urlopen(wunderurl % settings["weather"]["key"], args)
     else:
         args = args.split(',')
         if len(args) > 1:
             construct = args[1].replace(' ', '', 1).replace(' ', '_') + "/" + args[0].replace(' ', '_')
             print wunderurl % construct
-            data = urllib2.urlopen(wunderurl % construct)
+            data = urllib2.urlopen(wunderurl % settings["weather"]["key"], construct)
         else:
             print wunderurl % args[0]
-            data = urllib2.urlopen(wunderurl % args[0])
+            data = urllib2.urlopen(wunderurl % settings["weather"]["key"], args[0])
 
     jsondata = json.load(data)
 
