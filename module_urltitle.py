@@ -594,14 +594,19 @@ def _handle_apina(url):
 
 def _handle_reddit(url):
     """*reddit.com/r/*/comments/*/*"""
-    import simplejson as json
+
     if url[-1] != "/":
         ending = "/.json"
     else:
         ending = ".json"
     json_url = url + ending
-    content = urllib2.urlopen(json_url)
+
+    headers_lib = {}
+    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
+    content_request = urllib2.Request(json_url, None, headers_lib)
+    content = urllib2.urlopen(content_request)
     api_return = json.load(content)
+
     if not content:
         log.debug("No content received")
         return
@@ -610,13 +615,55 @@ def _handle_reddit(url):
         title = data['title']
         ups = data['ups']
         downs = data['downs']
+        subreddit = data['subreddit']
         score = ups - downs
         num_comments = data['num_comments']
         over_18 = data['over_18']
-        result = "%s - %dpts (%d up, %d down) - %d comments" % (title, score, ups, downs, num_comments)
+        result = "r/%s: %s - %d pts (%d up, %d down) - %d comments" % (subreddit, title, score, ups, downs, num_comments)
         if over_18 is True:
             result = result + " (NSFW)"
         return result
     except Exception, e:
         # parsing error, use default title
         return
+
+
+def _handle_reddit_2(url):
+    """*redd.it/*"""
+
+    match = re.search(r"(?<=it/)[a-z1-9]+", url)
+
+    info_url = "http://www.reddit.com/api/info.json?id=t3_%s"
+
+    headers_lib = {}
+    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
+    content_request = urllib2.Request(info_url % match.group(0), None, headers_lib)
+    content = urllib2.urlopen(content_request)
+    api_return = json.load(content)
+
+    full_url = api_return['data']['children'][0]['data']['permalink']
+    return _handle_reddit("http://www.reddit.com" + full_url)
+
+def _handle_reddit_user(url):
+    """*reddit.com/user/*"""
+
+    match = re.search(r"(?<=user/)[\w'_-]+", url)
+    info_url = "http://www.reddit.com/user/%s/about.json"
+
+    headers_lib = {}
+    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
+    content_request = urllib2.Request(info_url % match.group(0), None, headers_lib)
+    content = urllib2.urlopen(content_request)
+    api_return = json.load(content)
+
+    data = api_return["data"]
+
+    result = "Reddit user %s: %d link karma, %d comment karma" % (data["name"], data["link_karma"], data["comment_karma"])
+
+    return result
+
+def _handle_reddit_user_2(url):
+    """*reddit.com/u/*"""
+    match = re.search(r"(?<=u/)[\w'_-]+", url)
+
+    return _handle_reddit_user("http://www.reddit.com/user/%s" % match.group(0))
