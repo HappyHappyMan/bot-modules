@@ -103,16 +103,16 @@ def command_np(bot, user, channel, args):
         if album is None:
             album = ""
         else:
-            album = "from album " + album
+            album = " from album " + album
         if artist is None:
             artist = ""
 
         if len(nowplaying) > 0:
-            bot.say(channel, 'Last.fm | %s is listening to "%s" by %s %s | http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm | %s is listening to "%s" by %s%s | http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
         else:
-            bot.say(channel, 'Last.fm | %s last listened to "%s" by %s %s | http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm | %s last listened to "%s" by %s%s | http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
 
@@ -173,6 +173,8 @@ def command_compare(bot, user, channel, args):
 
 
 def command_charts(bot, user, channel, args):
+    settings = _import_yaml_data()
+
     DB = sqlite3.connect(settings["lastfm"]["database"])
     usersplit = user.split("!", 1)[0]
     c = DB.cursor()
