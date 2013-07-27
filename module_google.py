@@ -13,12 +13,12 @@ GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
 
 
 def _import_yaml_data(directory=os.curdir):
-    if os.path.exists(directory):
-        settings_path = os.path.join(directory, "modules", "google.settings")
+    try:
+        settings_path = os.path.join(directory, "modules", "twitter.settings")
         return yaml.load(file(settings_path))
-    else:
-        bot.log("Settings file for Google not set up; please create a Google API account and enable the Custom Search API.")
-        return
+    except OSError:
+            print "Settings file for Google not set up; please create a Google API account and modify the example settings file."
+            return
 
 
 def _googling(args):

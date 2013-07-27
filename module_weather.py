@@ -8,12 +8,12 @@ import os
 
 
 def _import_yaml_data(directory=os.curdir):
-    if os.path.exists(directory):
-        settings_path = os.path.join(directory, "modules", "weather.settings")
+    try:
+        settings_path = os.path.join(directory, "modules", "twitter.settings")
         return yaml.load(file(settings_path))
-    else:
-        print "Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file."
-        return
+    except OSError:
+            print "Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file."
+            return
 
 
 def command_weather(bot, user, channel, args):

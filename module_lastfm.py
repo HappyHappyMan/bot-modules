@@ -13,12 +13,12 @@ API_URL = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=
 
 
 def _import_yaml_data(directory=os.curdir):
-    if os.path.exists(directory):
-        settings_path = os.path.join(directory, "modules", "lastfm.settings")
+    try:
+        settings_path = os.path.join(directory, "modules", "twitter.settings")
         return yaml.load(file(settings_path))
-    else:
-        print "Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file."
-        return
+    except OSError:
+            print "Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file."
+            return
 
 
 def command_np(bot, user, channel, args):

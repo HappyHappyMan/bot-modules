@@ -9,12 +9,12 @@ import base64
 
 
 def _import_yaml_data(directory=os.curdir):
-    if os.path.exists(directory):
+    try:
         settings_path = os.path.join(directory, "modules", "twitter.settings")
         return yaml.load(file(settings_path))
-    else:
-        print "Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file."
-        return
+    except OSError:
+            print "Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file."
+            return
 
 
 def _handle_tweet(username):
