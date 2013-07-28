@@ -54,10 +54,11 @@ def _handle_tweet(username):
         if json1['error']:
             tweet = "User not found"
     except TypeError:
+        id_num = json1[0]['id']
         text = json1[0]['text']
         user = json1[0]['user']['screen_name']
         name = json1[0]['user']['name']
-        tweet = "Most recent tweet by %s(@%s) \x02\x0311|\x03\x02 %s" % (name, user, text)
+        tweet = "Most recent tweet by %s(@%s) \x02\x0311|\x03\x02 %s \x02\x0311|\x03\x02 https://twitter.com/%s/status/%s" % (name, user, text, user, id_num)
     return tweet
 
 
