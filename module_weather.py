@@ -9,7 +9,7 @@ import os
 
 def _import_yaml_data(directory=os.curdir):
     try:
-        settings_path = os.path.join(directory, "modules", "twitter.settings")
+        settings_path = os.path.join(directory, "modules", "weather.settings")
         return yaml.load(file(settings_path))
     except OSError:
             print "Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file."
@@ -33,7 +33,7 @@ def command_weather(bot, user, channel, args):
             return False
 
     if is_number(args) is True:
-        data = urllib2.urlopen(wunderurl % settings["weather"]["key"], args)
+        data = urllib2.urlopen(wunderurl % (settings["weather"]["key"], args))
     else:
         args = args.split(',')
         if len(args) > 1:
@@ -53,7 +53,7 @@ def command_weather(bot, user, channel, args):
     weather = jsondata['current_observation']['weather']
     humidity = jsondata['current_observation']['relative_humidity']
 
-    answer = "Weather for %s: %s, %s feels like %s, %s humidity, wind %s " % (city, weather, temp, feelslike, humidity, windspeed)
+    answer = "Weather for \x02%s\x02 \x02\x033|\x03\x02 %s, %s feels like %s, %s humidity, wind %s " % (city, weather, temp, feelslike, humidity, windspeed)
 
     usersplit = user.split('!', 1)[0]
     if channel == user:
