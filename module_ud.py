@@ -57,7 +57,7 @@ def command_ud(bot, user, channel, args):
 
     #definition = results[defNum - 1].parent.nextSibling.nextSibling.div.contents[0].replace("&quot;", '"')
     shortlink = results[defNum - 1].next.next['href']
-    textLen = 349 - (44 + len(shortlink))
+    textLen = 300 - (44 + len(shortlink))
     if len(defText) > textLen:
         trunclen = textLen - 1
         while True:
@@ -68,7 +68,7 @@ def command_ud(bot, user, channel, args):
                 continue
         defText = defText[:trunclen] + "..."
     defText = HTMLParser.HTMLParser().unescape(defText)
-    returnstr = "UD Definition of %s (Definition %s of %s) : %s | %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
+    returnstr = "UD Definition of %s (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
 
     bot.say(channel, returnstr.encode('utf-8'))
 

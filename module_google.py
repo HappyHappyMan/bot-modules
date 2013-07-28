@@ -14,7 +14,7 @@ GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
 
 def _import_yaml_data(directory=os.curdir):
     try:
-        settings_path = os.path.join(directory, "modules", "twitter.settings")
+        settings_path = os.path.join(directory, "modules", "google.settings")
         return yaml.load(file(settings_path))
     except OSError:
             print "Settings file for Google not set up; please create a Google API account and modify the example settings file."
@@ -39,7 +39,7 @@ def _googling(args):
 def command_google(bot, user, channel, args):
     result_dict = _googling(args)
 
-    bot.say(channel, "%s: %s | More results: %s " % (result_dict['name'], result_dict['url'], result_dict['shortURL']))
+    bot.say(channel, "%s: %s \x02\x0312|\x03\x02 More results: %s " % (result_dict['name'], result_dict['url'], result_dict['shortURL']))
     return
 
 

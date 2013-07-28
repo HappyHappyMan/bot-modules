@@ -40,11 +40,14 @@ def command_time(bot, user, channel, args):
     raw_offset = tz_data['rawOffset']
     dst_offset = tz_data['dstOffset']
     gmt_offset = (raw_offset + dst_offset) / 3600
+    gmt_offset = str(gmt_offset)
+    if gmt_offset > 0:
+        gmt_offset = "+" + gmt_offset
 
     os.environ['TZ'] = tzid
     time.tzset()
     timestr = time.strftime("%A, %B %d %Y %I:%M:%S %p %Z")
     address = latlng_data['results'][0]['formatted_address']
     os.environ['TZ'] = "America/New_York" # not sure if necessary
-    bot.say(channel, "The time and date in %s is %s, GMT %s" % (address.encode('utf-8'), timestr.encode('utf-8'), str(gmt_offset).encode('utf-8')))
+    bot.say(channel, "The time and date in %s is %s, GMT %s" % (address.encode('utf-8'), timestr.encode('utf-8'), gmt_offset.encode('utf-8')))
     return

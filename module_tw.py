@@ -57,7 +57,7 @@ def _handle_tweet(username):
         text = json1[0]['text']
         user = json1[0]['user']['screen_name']
         name = json1[0]['user']['name']
-        tweet = "Most recent tweet by %s(@%s): %s" % (name, user, text)
+        tweet = "Most recent tweet by %s(@%s) \x02\x0311|\x03\x02 %s" % (name, user, text)
     return tweet
 
 

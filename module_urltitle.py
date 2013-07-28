@@ -324,7 +324,7 @@ def _handle_tweet(url):
     text = json1['text']
     user = json1['user']['screen_name']
     name = json1['user']['name']
-    tweet = "Tweet by %s(@%s): %s" % (name, user, text)
+    tweet = "Tweet by %s(@%s) \x02\x0311|\x03\x02 %s" % (name, user, text)
 
     return tweet
 
@@ -409,10 +409,10 @@ def _handle_youtube_gdata(url):
         #if seconds > 0:
         #    lengthstr.append("%ds" % seconds)
         if racy:
-            adult = " | NSFW"
+            adult = " \x034|\x03 \x02NSFW\x02"
         else:
             adult = ""
-        return "%s | uploaded by %s | %s views%s" % (title, author, views, adult)
+        return "%s \x034|\x03 uploaded by %s \x034|\x03 %s views%s" % (title, author, views, adult)
 
 def _handle_helmet(url):
     """http://www.helmet.fi/record=*fin"""
@@ -619,9 +619,9 @@ def _handle_reddit(url):
         score = ups - downs
         num_comments = data['num_comments']
         over_18 = data['over_18']
-        result = "r/%s: %s - %d pts (%d up, %d down) - %d comments" % (subreddit, title, score, ups, downs, num_comments)
+        result = "\x02r/%s\x02 \x037\x02|\x02\x03 %s - %d pts (%d up, %d down) \x037\x02|\x02\x03 %d comments" % (subreddit, title, score, ups, downs, num_comments)
         if over_18 is True:
-            result = result + " (NSFW)"
+            result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
         return result
     except Exception, e:
         # parsing error, use default title
@@ -658,7 +658,7 @@ def _handle_reddit_user(url):
 
     data = api_return["data"]
 
-    result = "Reddit user %s: %d link karma, %d comment karma" % (data["name"], data["link_karma"], data["comment_karma"])
+    result = "Reddit user \x02%s\x02 \x037\x02|\x02\x03 %d link karma, %d comment karma" % (data["name"], data["link_karma"], data["comment_karma"])
 
     return result
 

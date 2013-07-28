@@ -14,7 +14,7 @@ API_URL = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=
 
 def _import_yaml_data(directory=os.curdir):
     try:
-        settings_path = os.path.join(directory, "modules", "twitter.settings")
+        settings_path = os.path.join(directory, "modules", "lastfm.settings")
         return yaml.load(file(settings_path))
     except OSError:
             print "Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file."
@@ -108,11 +108,11 @@ def command_np(bot, user, channel, args):
             artist = ""
 
         if len(nowplaying) > 0:
-            bot.say(channel, 'Last.fm | %s is listening to "%s" by %s%s | http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 %s is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
         else:
-            bot.say(channel, 'Last.fm | %s last listened to "%s" by %s%s | http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 %s last listened to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
 
@@ -171,7 +171,7 @@ def command_compare(bot, user, channel, args):
             else:
                 simString = simString + artistList[r] + ", "
 
-        bot.say(channel, "Last.fm | Users %s and %s have similarity %s%% | %s" % 
+        bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users %s and %s have similarity %s%% \x034\x02|\x02\x03 %s" % 
             (lastid.encode('utf-8'), yourid.encode('utf-8'), number, simString.encode('utf-8')))
 
 
@@ -217,4 +217,4 @@ def command_charts(bot, user, channel, args):
         else:
             retString = retString + artistList[r][0] + " " + "(" + artistList[r][1] + "), "
 
-    bot.say(channel, "Last.fm weekly charts for %s: %s" % (lastid.encode('utf-8'), retString.encode('utf-8')))
+    bot.say(channel, "Last.fm weekly charts for %s \x034\x02|\x02\x03 %s" % (lastid.encode('utf-8'), retString.encode('utf-8')))
