@@ -85,7 +85,7 @@ def command_quote(bot, user, channel, args):
             linecache.clearcache()
             return_line = linecache.getline(
                 os.path.join(expldir, "quotes.txt"), randy).strip("\n")
-            bot.say(channel, "Quote %s/%s: " % (randy, totlines) + return_line)
+            bot.say(channel, "Quote \x02%s/%s\x02 \x02\x036|\x03\x02 " % (randy, totlines) + return_line)
             #bot.say(channel, str(randy))
             return
         else:
@@ -112,5 +112,5 @@ def command_quote(bot, user, channel, args):
     if int(argy[0]) <= totlines:
         linecache.clearcache()
         return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), (int(argy[0]))).strip("\n")
-        bot.say(channel, "Quote %s/%s: " % (argy[0], totlines) + return_line)
+        bot.say(channel, "Search result \x02\x036|\x03\x02 Quote \x02%s/%s\x02 " % (argy[0], totlines) + return_line)
         return
