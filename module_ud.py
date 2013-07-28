@@ -68,7 +68,7 @@ def command_ud(bot, user, channel, args):
                 continue
         defText = defText[:trunclen] + "..."
     defText = HTMLParser.HTMLParser().unescape(defText)
-    returnstr = "UD Definition of %s (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
+    returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
 
     bot.say(channel, returnstr.encode('utf-8'))
 

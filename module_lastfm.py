@@ -108,11 +108,11 @@ def command_np(bot, user, channel, args):
             artist = ""
 
         if len(nowplaying) > 0:
-            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 %s is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
         else:
-            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 %s last listened to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 last listened to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
 
@@ -139,10 +139,10 @@ def command_compare(bot, user, channel, args):
     DB.close()
 
     if lastid == "":
-        bot.say(channel, "User %s doesn't exist in my db! They should look into that." % args.split(" ")[0])
+        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
         return
     if yourid == "":
-        bot.say(channel, "User %s doesn't exist in my db! They should look into that." % usersplit)
+        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % usersplit)
         return
     else:
         import math  # Yeah, yeah, whatever
@@ -171,7 +171,7 @@ def command_compare(bot, user, channel, args):
             else:
                 simString = simString + artistList[r] + ", "
 
-        bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users %s and %s have similarity %s%% \x034\x02|\x02\x03 %s" % 
+        bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users \x02%s\x02 and \x02%s\x02 have similarity %s%% \x034\x02|\x02\x03 %s" % 
             (lastid.encode('utf-8'), yourid.encode('utf-8'), number, simString.encode('utf-8')))
 
 
@@ -217,4 +217,4 @@ def command_charts(bot, user, channel, args):
         else:
             retString = retString + artistList[r][0] + " " + "(" + artistList[r][1] + "), "
 
-    bot.say(channel, "Last.fm weekly charts for %s \x034\x02|\x02\x03 %s" % (lastid.encode('utf-8'), retString.encode('utf-8')))
+    bot.say(channel, "Last.fm weekly charts for \x02%s\x02 \x034\x02|\x02\x03 %s" % (lastid.encode('utf-8'), retString.encode('utf-8')))

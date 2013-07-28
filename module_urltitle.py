@@ -324,17 +324,8 @@ def _handle_tweet(url):
     text = json1['text']
     user = json1['user']['screen_name']
     name = json1['user']['name']
-    tweet = "Tweet by %s(@%s) \x02\x0311|\x03\x02 %s" % (name, user, text)
+    tweet = "Tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s" % (name, user, text)
 
-    return tweet
-
-    
-    #reads dict
-    ##You can modify the fields below or add any fields you want to the returned string
-    text = json1['text']
-    user = json1['user']['screen_name']
-    name = json1['user']['name']
-    tweet = "Tweet by %s(@%s): %s" % (name, user, text)
     return tweet
 
 def _handle_tweet_2(url):

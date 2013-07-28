@@ -39,7 +39,7 @@ def _googling(args):
 def command_google(bot, user, channel, args):
     result_dict = _googling(args)
 
-    bot.say(channel, "%s: %s \x02\x0312|\x03\x02 More results: %s " % (result_dict['name'], result_dict['url'], result_dict['shortURL']))
+    bot.say(channel, "%s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 More results: %s " % (result_dict['name'], result_dict['url'], result_dict['shortURL']))
     return
 
 
@@ -50,7 +50,7 @@ def command_g(bot, user, channel, args):
 def command_lucky(bot, user, channel, args):
     result_dict = _googling(args)
 
-    bot.say(channel, "%s: %s" % (result_dict['name'], result_dict['url']))
+    bot.say(channel, "%s \x02\x0312|\x03\x02 %s" % (result_dict['name'], result_dict['url']))
 
 
 def command_l(bot, user, channel, args):
