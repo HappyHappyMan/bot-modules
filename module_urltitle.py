@@ -17,15 +17,13 @@ import urllib2
 import yaml
 import os
 import base64
-try:
-    import json
-    has_json = True
-except:
-    print "Unable to load json, not all title features will work"
+
 
 from types import TupleType
 
 from util.BeautifulSoup import BeautifulStoneSoup
+#from util.BeautifulSoup import BeautifulSoup
+import BeautifulSoup
 
 log = logging.getLogger("urltitle")
 config = None
@@ -286,13 +284,14 @@ def _handle_tweet(url):
     auth_url = "https://api.twitter.com/oauth2/token"
     tweet_url = "https://api.twitter.com/1.1/statuses/show/%s.json"
 
-    test1 = re.match("https?://twitter\.com\/(.*?)/(\w+)/statuse?s?/(\d+)", url)
-    if test1:
-        test = test1
-        username = test.group(3)
-    else:
-        test = re.match("https?://*.twitter\.com\/(\w+)/statuse?s?/(\d+)", url)
-        username = test.group(2)
+    # test1 = re.match("https?://twitter\.com\/(.*?)/(\w+)/statuse?s?/(\d+)", url)
+    # if test1:
+    #     test = test1
+    #     username = test.group(3)
+    # else:
+    test = re.match("https?://w?w?w?\.twitter\.com\/(\w+)/statuse?s?/(\d+)", url)
+    print test.group(0)
+    username = test.group(2)
 
     # Now to deal with all the ridiculous authentication stuff
     base64_key = base64.b64encode(con_key + ":" + secret_key)
@@ -336,7 +335,9 @@ def _handle_tweet_3(url):
     """http*://twitter.com/*/statuses/*"""
     return _handle_tweet(url)
 
-
+def _handle_tweet_4(url):
+    """http*://www.twitter.com/*/statuses/*"""
+    return _handle_tweet(url)
 
 
 def _handle_netanttila(url):
