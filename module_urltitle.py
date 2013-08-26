@@ -284,14 +284,10 @@ def _handle_tweet(url):
     auth_url = "https://api.twitter.com/oauth2/token"
     tweet_url = "https://api.twitter.com/1.1/statuses/show/%s.json"
 
-    # test1 = re.match("https?://twitter\.com\/(.*?)/(\w+)/statuse?s?/(\d+)", url)
-    # if test1:
-    #     test = test1
-    #     username = test.group(3)
-    # else:
-    test = re.match("https?://w?w?w?\.twitter\.com\/(\w+)/statuse?s?/(\d+)", url)
-    print test.group(0)
-    username = test.group(2)
+    test = re.match("https?://w?w?w?\.?twitter\.com\/(\w+)/statuse?s?/(\d+)*", url)
+    print test.group(1)
+    print test.group(2)
+    username = test.group(1)
 
     # Now to deal with all the ridiculous authentication stuff
     base64_key = base64.b64encode(con_key + ":" + secret_key)
@@ -308,7 +304,7 @@ def _handle_tweet(url):
         return
 
     #matches for unique tweet id string
-    get_url = tweet_url % username
+    get_url = tweet_url % test.group(2)
     get_token = "Bearer " + auth_dict['access_token']
     get_request = urllib2.Request(get_url)
     get_request.add_header("Authorization", get_token)
@@ -659,3 +655,8 @@ def _handle_reddit_user_2(url):
     match = re.search(r"(?<=u/)[\w'_-]+", url)
 
     return _handle_reddit_user("http://www.reddit.com/user/%s" % match.group(0))
+
+def _handle_subreddit(url):
+    """*reddit.com/r/*"""
+    print "Yep"
+    return _handle_reddit(url)
