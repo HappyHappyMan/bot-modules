@@ -604,10 +604,14 @@ def _handle_reddit(url):
         ups = data['ups']
         downs = data['downs']
         subreddit = data['subreddit']
+        if data['domain'][:4] == "self":
+            link = ""
+        else:
+            link = "\x037\x02|\x02\x03 " + data['url']
         score = ups - downs
         num_comments = data['num_comments']
         over_18 = data['over_18']
-        result = "\x02r/%s\x02 \x037\x02|\x02\x03 %s - %d pts (%d up, %d down) \x037\x02|\x02\x03 %d comments" % (subreddit, title, score, ups, downs, num_comments)
+        result = "\x02r/%s\x02 \x037\x02|\x02\x03 %s - %d pts (%d up, %d down) \x037\x02|\x02\x03 %d comments %s" % (subreddit, title, score, ups, downs, num_comments, link)
         if over_18 is True:
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
         return result
