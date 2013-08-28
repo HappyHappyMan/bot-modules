@@ -8,15 +8,6 @@ import random
 import linecache
 
 
-def expl_parseterm(expl):
-    expl = expl.split(" ")
-    expl = expl[0]
-    expl = expl.lower()
-    expl = expl.strip()
-    invalidchars = re.compile("[^a-z0-9\ :\.-]")
-    expl = invalidchars.sub("_", expl)
-    return expl
-
 
 def check_params(bot, args, channel):
     """Do some initial checking for the stuff we need for every subcommand"""
@@ -46,7 +37,6 @@ def file_len(fname):
 
 def command_qadd(bot, user, channel, args):
     """adds quote to db. Usage: .qadd <quote goes here, don't use any chevrons>"""
-
     try:
         expldir = check_params(bot, args, channel)
     except TypeError:
@@ -55,6 +45,8 @@ def command_qadd(bot, user, channel, args):
 
     if not args:
         return bot.say(user, "Try again please")
+
+    args = re.sub(r"\x03[\d+]*|\x02", "", args)
 
     with open(os.path.join(expldir, "quotes.txt"), "a") as quotestxt:
         quotestxt.write(args.strip('\n') + "\n")
@@ -93,24 +85,24 @@ def command_quote(bot, user, channel, args):
             args = args.lower()
             ratio = 0
             line_num = 0
-            for x in range(totlines):
+            for x in range(1, totlines + 1):
                 line = linecache.getline(os.path.join(expldir, "quotes.txt"), x).strip("\n").lower()
                 diff = fuzz.token_set_ratio(line, args)
                 if diff > ratio:
                     ratio = diff
                     line_num = x
-                    print "%s : %s" % (ratio, line_num)
+                    print "%s : %s" % (line_num, ratio)
             if ratio < 65:
                 bot.log("Input: %s | match ratio: %s" % (args, ratio))
                 bot.say(channel, "No matches found.")
                 return
             return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), line_num).strip("\n")
-            bot.say(channel, "Quote %s/%s: " % (line_num, totlines) + return_line)
+            bot.say(channel, "Search result \x02\x036|\x03\x02 Quote \x02%s/%s\x02 \x02\x036|\x03\x02 " % (line_num, totlines) + return_line)
             bot.log("Input: %s | match ratio: %s | Output: %s" % (args, ratio, return_line))
             return
 
     if int(argy[0]) <= totlines:
         linecache.clearcache()
         return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), (int(argy[0]))).strip("\n")
-        bot.say(channel, "Search result \x02\x036|\x03\x02 Quote \x02%s/%s\x02 " % (argy[0], totlines) + return_line)
+        bot.say(channel, "Quote \x02%s/%s\x02 \x02\x036|\x03\x02 " % (argy[0], totlines) + return_line)
         return
