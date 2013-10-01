@@ -5,14 +5,28 @@ import BeautifulSoup
 import urllib2
 
 def command_roll(bot, user, channel, args):
-    """rolls dice"""
+    """rolls dice. Usage: .roll xdy where x is the number of dice and y is the number of sides on each die"""
     nick = user.split('!', 1)[0]
-    if args[0] == "d":
-        args = args[1:]
     try:
-        bot.say(channel, nick + ": you rolled a " + str(random.randint(1, int(args))))
+        index = args.index('d')
     except ValueError:
-        bot.say(channel, "Let's try to stay within the bounds of reality, okay, " + nick + "?")
+        bot.say(channel, "The dice ricochet off the table and clatter onto the floor. Your peers laugh at you because you can't even roll virtual dice properly. Feel very ashamed, then go read the .help")
+        return
+    num = args[:index]
+    args = args[index+1:]
+
+    if int(num) < 16:
+        arr = []
+        for x in range(int(num)):
+            arr.append(random.randint(1, int(args)))
+    else:
+        bot.say(channel, "I'm sorry, I don't have that many dice, %s." % nick)
+        return
+
+    if int(num) == 1:
+        bot.say(channel, nick + ": You rolled a " + str(arr[0]))
+    else:
+        bot.say(channel, nick + ": You rolled a " + ', a '.join(map(str, arr[:-1])) + " and a " + str(arr[-1]) + " for a total of " + str(sum(arr)))
     return
 
 def command_isup(bot, user, channel, args):
@@ -29,5 +43,4 @@ def command_isup(bot, user, channel, args):
         bot.say(channel, "%s seems to be down for everyone, %s." % (args, nick))
     else:
         bot.say(channel, "It's just you, %s, %s is up from here." % (nick, args))
-
     return
