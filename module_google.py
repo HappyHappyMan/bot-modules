@@ -23,7 +23,7 @@ def _import_yaml_data(directory=os.curdir):
 
 def _googling(args):
     settings = _import_yaml_data()
-    json1 = json.load(urllib2.urlopen(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8')))))
+    json1 = json.load(urllib2.urlopen(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8', 'ignore')))))
 
     result = {}
     result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))

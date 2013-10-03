@@ -12,14 +12,6 @@ def command_ud(bot, user, channel, args):
     """.ud word def#. ie, to get the second definition for the word Google, you'd type .ud Google 2. Defaults to the first definition, if no number is given."""
     queryWord = args.split(" ")[0]
 
-    # try:
-    #     defNum = int(args.split(" ")[1])
-    #     mult = True
-    # except (IndexError,ValueError):
-    #     queryWord = args
-    #     mult = False
-    #     defNum = 1
-
     try:
         defNum = int(args.split(" ")[-1])
         print "num specified"
@@ -29,9 +21,6 @@ def command_ud(bot, user, channel, args):
         numGiven = False
         defNum = 1
 
-    # if len(args.split(" ")) == 1:
-    #     queryWord = args
-    # else:
     queryWord = ""
     if numGiven is True:
         for word in args.split(" ")[:-1]:

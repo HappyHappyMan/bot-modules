@@ -79,7 +79,7 @@ def command_np(bot, user, channel, args):
 
         if type(lastid) is None:
             bot.say(usersplit, "Please set your lastfm username: .np add")
-            bot.say(channel, "User %s doesn't exist in my db! They should look into that." % args.split(" ")[0])
+            bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
         print lastid
 
         c.close()

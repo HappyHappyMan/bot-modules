@@ -179,8 +179,8 @@ def _title(bot, channel, title, smart=False):
         info = title[1]
         title = title[0]
     # crop obscenely long titles
-    if len(title) > 200:
-        title = title[:200] + "..."
+    if len(title) > 300:
+        title = title[:300] + "..."
 
     title = BeautifulStoneSoup(title, convertEntities=BeautifulStoneSoup.ALL_ENTITIES)
     log.info(title)
@@ -581,7 +581,7 @@ def _handle_apina(url):
 
 
 def _handle_reddit(url):
-    """*reddit.com/r/*/comments/*/*"""
+    """*reddit.com/r/*"""
 
     if url[-1] != "/":
         ending = "/.json"
@@ -616,7 +616,6 @@ def _handle_reddit(url):
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
         return result
     except Exception, e:
-        # parsing error, use default title
         return
 
 
@@ -659,8 +658,3 @@ def _handle_reddit_user_2(url):
     match = re.search(r"(?<=u/)[\w'_-]+", url)
 
     return _handle_reddit_user("http://www.reddit.com/user/%s" % match.group(0))
-
-def _handle_subreddit(url):
-    """*reddit.com/r/*"""
-    print "Yep"
-    return _handle_reddit(url)

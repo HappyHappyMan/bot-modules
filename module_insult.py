@@ -14,9 +14,8 @@ def file_len(fname):
         return i + 1
 
 def command_insult(bot, user, channel, args):
-    linecount = file_len("/home/sri/testbot/pyfibot-read-only/modules/insults.txt")
-    return_line = linecache.getline("/home/sri/testbot/pyfibot-read-only/modules/insults.txt", random.randint(0, linecount))
+    linecount = file_len("/home/sri/bots/testbot/modules/insults.txt")
+    return_line = linecache.getline("/home/sri/bots/testbot/modules/insults.txt", random.randint(0, linecount))
     nick = user.split('!', 1)[0]
-    split_args = args.split(' ')
 
-    bot.say(channel, str(args) + ", " + str(nick) + " would like you to know that " + str(return_line) + "args: " + split_args[1])
+    bot.say(channel, str(args) + ", " + str(nick) + " would like you to know that " + str(return_line))

@@ -19,31 +19,31 @@ def file_len(fname):
             pass
         return i + 1
 
-def command_addkpop(bot, user, channel, args):
-    """adds quote to db. Usage: .qadd <quote goes here, don't use any chevrons>"""
+# def command_addkpop(bot, user, channel, args):
+#     """adds quote to db. Usage: .qadd <quote goes here, don't use any chevrons>"""
 
 
-    if not args:
-        return bot.say(user, "Try again please")
+#     if not args:
+#         return bot.say(user, "Try again please")
 
-    args = args.split(" ")
-    for arg in args:
-        result = heavy_lifting(arg)
-        if result == 3:
-            bot.say(user, "%s seems to be private!" % (arg))
-        elif result == 0:
-            bot.say(user, "Video %s too recent, no data for it yet!" % (arg))
-        elif result == 5:
-            bot.say(user, "Youtube videos only, please!")
-        else:
-            with open("/home/sri/kpop.txt", "a") as quotestxt:
-                quotestxt.write(result.encode('utf-8') + "\n")
-            quotestxt.close()
-            bot.say(user, "Video added!")
+#     args = args.split(" ")
+#     for arg in args:
+#         result = heavy_lifting(arg)
+#         if result == 3:
+#             bot.say(user, "%s seems to be private!" % (arg))
+#         elif result == 0:
+#             bot.say(user, "Video %s too recent, no data for it yet!" % (arg))
+#         elif result == 5:
+#             bot.say(user, "Youtube videos only, please!")
+#         else:
+#             with open("/home/sri/kpop.txt", "a") as quotestxt:
+#                 quotestxt.write(result.encode('utf-8') + "\n")
+#             quotestxt.close()
+#             bot.say(user, "Video added!")
             
 
     #bot.say(channel, "Video(s) successfully added")
-    return
+    #return
 
 def heavy_lifting(url):
     gdata_url = "http://gdata.youtube.com/feeds/api/videos/%s"
@@ -78,18 +78,13 @@ def heavy_lifting(url):
 def command_kpop(bot, user, channel, args):
     """Returns a random video link from the database."""
 
-    try:
-        expldir = os.path.join(sys.path[0], "expl/qdb", channel)
-    except TypeError:
-        return
-
     #args = args.split(" ", 1)
 
-    totlines = file_len("/home/sri/kpop.txt")
+    totlines = file_len("/home/sri/bots/testbot/modules/kpop.txt")
 
     randy = random.randint(1, totlines)
     linecache.clearcache()
-    return_line = linecache.getline("/home/sri/kpop.txt", randy).strip("\n")
+    return_line = linecache.getline("/home/sri/bots/testbot/modules/kpop.txt", randy).strip("\n")
     #bot.say(channel, "Quote %s/%s: " % (randy, totlines) + return_line)
     bot.say(channel, return_line)
     return
