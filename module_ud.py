@@ -4,6 +4,7 @@
 import BeautifulSoup as bs
 import urllib2
 import HTMLParser
+import re
 
 UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
 
@@ -36,16 +37,20 @@ def command_ud(bot, user, channel, args):
 
     soup = bs.BeautifulSoup(urlobj.read())
 
-    results = soup.findAll("td", attrs={'class': 'index'})
-    numResults = len(results)
-        ## time to build up the complete definition from any and all links
-    defComplete = results[defNum - 1].parent.nextSibling.nextSibling.findAll(attrs={'class': 'definition'})[0].findAll(text=True)
+    
+    entries = soup.findAll(attrs={'id':'entries'})
+    defs = entries[0].findAll(attrs={'id':re.compile(r'entry_*')})
+    shortlinks = entries[0].findAll(attrs={'class':'word'})
+    numResults = len(defs)
+
+    defComplete = defs[defNum - 1].findAll(attrs={'class':'definition'})[0].findAll(text=True)
+    shortlink = shortlinks[defNum - 1].a['href']
+
+    ## time to build up the complete definition from any and all links
     defText = ""
     for item in defComplete:
         defText = defText + item
 
-    #definition = results[defNum - 1].parent.nextSibling.nextSibling.div.contents[0].replace("&quot;", '"')
-    shortlink = results[defNum - 1].next.next['href']
     textLen = 300 - (44 + len(shortlink))
     if len(defText) > textLen:
         trunclen = textLen - 1

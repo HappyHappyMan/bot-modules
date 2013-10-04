@@ -57,8 +57,6 @@ def command_weather(bot, user, channel, args):
 
     usersplit = user.split('!', 1)[0]
     if channel == user:
-        print channel
-        print usersplit
         bot.msg(usersplit, answer.encode('utf-8'))
     else:
         bot.msg(channel, answer.encode('utf-8'))
