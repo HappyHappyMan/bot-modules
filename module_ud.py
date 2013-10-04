@@ -59,6 +59,10 @@ def command_ud(bot, user, channel, args):
     defText = HTMLParser.HTMLParser().unescape(defText)
     returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
 
+    usersplit = user.split('!', 1)[0]
+    if channel == user:
+        channel = usersplit
+
     bot.say(channel, returnstr.encode('utf-8'))
 
     return

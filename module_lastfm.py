@@ -6,9 +6,6 @@ import sqlite3
 import yaml
 import os
 
-##IMPLEMENT THIS THING USE THE EXECUTE LINE TO IMPLEMENT OK? OK##
-
-
 API_URL = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=1"
 
 
