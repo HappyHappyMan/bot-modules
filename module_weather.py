@@ -38,13 +38,26 @@ def command_weather(bot, user, channel, args):
         args = args.split(',')
         if len(args) > 1:
             construct = args[1].replace(' ', '', 1).replace(' ', '_') + "/" + args[0].replace(' ', '_')
-            #print wunderurl % construct
+            # print construct + " is construct"
             data = urllib2.urlopen(wunderurl % (settings["weather"]["key"], construct))
         else:
-            #print wunderurl % args[0]
+            args[0] = args[0].replace(' ', '_')
+            # print args[0] + " is args[0]"
             data = urllib2.urlopen(wunderurl % (settings["weather"]["key"], args[0]))
 
     jsondata = json.load(data)
+
+    ## DEBUG ##
+    print jsondata['response'].keys()
+
+    if jsondata['response']['results']:
+        for x in xrange(len(jsondata['response']['results'])):
+            if jsondata['response']['results'][x]['country_name'] == "USA":
+                # DEBUG
+                # print "yes, this seems to have worked"
+                # print "http://api.wunderground.com/api/%s/conditions" % (settings["weather"]["key"]) + jsondata['response']['results'][x]['l']
+                jsondata = json.load(urllib2.urlopen("http://api.wunderground.com/api/%s/conditions" % (settings["weather"]["key"]) + jsondata['response']['results'][x]['l'] + ".json"))
+                break
 
     city = jsondata['current_observation']['display_location']['full']
     temp = jsondata['current_observation']['temperature_string']
