@@ -31,8 +31,8 @@ def command_time(bot, user, channel, args):
         print LATLNG_URL % args
         latlng_data = json.load(urllib2.urlopen(LATLNG_URL % args))
 
-    lat = latlng_data['results'][0]['geometry']['bounds']['northeast']['lat']
-    lng = latlng_data['results'][0]['geometry']['bounds']['northeast']['lng']
+    lat = latlng_data['results'][0]['geometry']['location']['lat']
+    lng = latlng_data['results'][0]['geometry']['location']['lng']
     timestamp = time.time()
 
     tz_data = json.load(urllib2.urlopen(TZ_URL % (lat, lng, timestamp)))
