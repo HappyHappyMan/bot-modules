@@ -84,6 +84,34 @@ def _set_saved_data(nick, location, conn, temp_type):
 
         return
 
+def _parse_weather_output(weather_data, city_name, measure_type):
+
+    temp_suffix = [u"°F", u"°C", u"°C", u"°C"]
+    wind_suffix = ["mph","m/s","kph","mph"]
+
+    summary = weather_data['currently']['summary']
+    humidity = str(weather_data['currently']['humidity'] * 100) + "%"
+    wind_direction = weather_data['currently']['windBearing']
+    precipProb = str(weather_data['currently']['precipProbability'] * 100) + "%"
+
+    if measure_type == 4:
+        temp_f = str(round(weather_data['currently']['temperature'], 2))
+        temp_c = str(round((weather_data['currently']['temperature'] - 32) * 5/9, 2))
+        feelslike_f = str(round(weather_data['currently']['apparentTemperature'], 2))
+        feelslike_c = str(round((weather_data['currently']['apparentTemperature'] - 32) * 5/9, 2))
+        windspeed_mph = str(round(weather_data['currently']['windSpeed'], 2))
+        windspeed_ms = str(round(weather_data['currently']['windSpeed'] * .44704, 2))
+
+        weather_string = "Weather for \x02%s\x02 \x02\x033|\x03\x02 %s, %s%s (%s%s) feels like %s%s (%s%s), %s humidity, wind %s %s (%s %s), %s chance of precipitation" % (city_name, summary, temp_f, temp_suffix[0], temp_c, temp_suffix[1], feelslike_f, temp_suffix[0], feelslike_c, temp_suffix[1], humidity, windspeed_mph, wind_suffix[0], windspeed_ms, wind_suffix[1], precipProb)
+    else:
+        temperature = str(round(weather_data['currently']['temperature'], 2))
+        feels_like = str(round(weather_data['currently']['apparentTemperature'], 2))
+        wind_speed = str(round(weather_data['currently']['windSpeed'], 2))
+
+        weather_string = "Weather for \x02%s\x02 \x02\x033|\x03\x02 %s, %s%s feels like %s%s, %s humidity, wind %s %s, %s chance of precipitation" % (city_name, summary, temperature, temp_suffix[measure_type], feels_like, temp_suffix[measure_type], humidity, wind_speed, wind_suffix[measure_type], precipProb)
+
+    return weather_string
+
 def command_weather(bot, user, channel, args):
     """Gives weather for location. Enter a city or zip code"""
 
@@ -107,6 +135,9 @@ def command_weather(bot, user, channel, args):
             elif args[1] == "uk":
                 units = "?units=uk"
                 measure_type = 3
+            elif args[1] == "both":
+                units = "?units=us"
+                measure_type = 4
 
         print latlng
         print type(latlng)
@@ -128,6 +159,9 @@ def command_weather(bot, user, channel, args):
                 units = "?units=ca"
             elif measure_type == 3:
                 units = "?units=uk"
+            elif measure_type == 4:
+                units = "?units=us"
+                bot.say(nick, "I hate you for making me do this.")
             data = urllib2.urlopen(API_URL % (settings["weather"]["key"], latlng[0]) + units)
         else:
             bot.say(channel, "You're not in the database! Set a location with .wadd.")
@@ -138,18 +172,7 @@ def command_weather(bot, user, channel, args):
     print weather_data["currently"].keys()
 
     city_name = latlng[1]
-    temperature = str(weather_data['currently']['temperature'])
-    feels_like = str(weather_data['currently']['apparentTemperature'])
-    summary = weather_data['currently']['summary']
-    humidity = str(weather_data['currently']['humidity'] * 100) + "%"
-    wind_direction = weather_data['currently']['windBearing']
-    precipProb = str(weather_data['currently']['precipProbability'] * 100) + "%"
-    wind_speed = str(weather_data['currently']['windSpeed'])
-
-    temp_suffix = [u"°F", u"°C", u"°C", u"°C"]
-    wind_suffix = ["mph","m/s","kph","mph"]
-
-    weather_string = "Weather for \x02%s\x02 \x02\x033|\x03\x02 %s, %s%s feels like %s%s, %s humidity, wind %s %s, %s chance of precipitation" % (city_name, summary, temperature, temp_suffix[measure_type], feels_like, temp_suffix[measure_type], humidity, wind_speed, wind_suffix[measure_type], precipProb)
+    weather_string = _parse_weather_output(weather_data, latlng[1], measure_type)
 
     bot.say(channel, weather_string.encode('utf-8'))
 
@@ -172,6 +195,8 @@ def command_wadd(bot, user, channel, args):
             args[1] = 2
         elif args[1] == "uk":
             args[1] = 3
+        elif args[1] == "both":
+            args[1] = 4
     except IndexError:
         args.append(0)
 
