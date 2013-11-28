@@ -39,7 +39,13 @@ def command_ud(bot, user, channel, args):
 
     
     entries = soup.findAll(attrs={'id':'entries'})
-    defs = entries[0].findAll(attrs={'id':re.compile(r'entry_*')})
+    try:
+        defs = entries[0].findAll(attrs={'id':re.compile(r'entry_*')})
+    except IndexError:
+        if 'tripgod' in user.split('!', 1)[0]:
+            bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
+        return
+
     shortlinks = entries[0].findAll(attrs={'class':'word'})
     numResults = len(defs)
 
