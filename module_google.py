@@ -23,11 +23,12 @@ def _import_yaml_data(directory=os.curdir):
 
 def _googling(args):
     settings = _import_yaml_data()
+    args = args.decode('utf-8')
     json1 = json.load(urllib2.urlopen(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8', 'ignore')))))
-
     result = {}
     result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
     result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
+    result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
     shortReq = urllib2.urlopen(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
     shortData = json.load(shortReq)
     print shortData.keys()
@@ -40,10 +41,23 @@ def command_google(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
     result_dict = _googling(args)
 
+    str_len = 300
+    text_len = 41 + sum([len(result_dict[item]) for item in result_dict])
+    if text_len > str_len:
+        result_dict['snippet'] = result_dict['snippet'][:-(text_len - str_len)]
+        trunclen = len(result_dict['snippet']) - 1
+        while True:
+            if result_dict['snippet'][trunclen] == " ":
+                break
+            else:
+                trunclen = trunclen - 1
+                continue
+        result_dict['snippet'] = result_dict['snippet'][:trunclen] + "..."
+
     if channel == user:
         channel = usersplit
 
-    bot.say(channel, "%s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 More results: %s " % (result_dict['name'], result_dict['url'], result_dict['shortURL']))
+    bot.say(channel, "%s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 More results: %s" % (result_dict['name'], result_dict['snippet'], result_dict['url'], result_dict['shortURL']))
     return
 
 
