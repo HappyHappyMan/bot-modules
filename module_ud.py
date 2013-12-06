@@ -46,11 +46,11 @@ def command_ud(bot, user, channel, args):
             bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
         return
 
-    shortlinks = entries[0].findAll(attrs={'class':'word'})
+    shortlinks = entries[0].findAll(attrs={'class':'index'})
     numResults = len(defs)
 
     defComplete = defs[defNum - 1].findAll(attrs={'class':'definition'})[0].findAll(text=True)
-    shortlink = shortlinks[defNum - 1].a['href']
+    shortlink = shortlinks[defNum - 1]['href']
 
     ## time to build up the complete definition from any and all links
     defText = ""
