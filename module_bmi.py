@@ -27,10 +27,10 @@ def print_bmi(bmi):
     return("your bmi is %.2f which is %s" % (bmi, weight_category))
 
 
-def command_bmi(bot, user, channel, args):
-    """Calculates your body mass index. Usage: .bmi height(cm)/weight(kg)"""
-    data = args.split("/")
-    if len(data) != 2:
-        return bot.say(channel, "error with arguments")
-    else:
-        return bot.say(channel, print_bmi(calc_bmi(int(data[0]), int(data[1]))))
+# def command_bmi(bot, user, channel, args):
+#     """Calculates your body mass index. Usage: .bmi height(cm)/weight(kg)"""
+#     data = args.split("/")
+#     if len(data) != 2:
+#         return bot.say(channel, "error with arguments")
+#     else:
+#         return bot.say(channel, print_bmi(calc_bmi(int(data[0]), int(data[1]))))

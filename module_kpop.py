@@ -75,16 +75,16 @@ def heavy_lifting(url):
         return 5
 
 
-def command_kpop(bot, user, channel, args):
-    """Returns a random video link from the database."""
+# def command_kpop(bot, user, channel, args):
+#     """Returns a random video link from the database."""
 
-    #args = args.split(" ", 1)
+#     #args = args.split(" ", 1)
 
-    totlines = file_len("/home/sri/bots/testbot/modules/kpop.txt")
+#     totlines = file_len("/home/sri/bots/testbot/modules/kpop.txt")
 
-    randy = random.randint(1, totlines)
-    linecache.clearcache()
-    return_line = linecache.getline("/home/sri/bots/testbot/modules/kpop.txt", randy).strip("\n")
-    #bot.say(channel, "Quote %s/%s: " % (randy, totlines) + return_line)
-    bot.say(channel, return_line)
-    return
+#     randy = random.randint(1, totlines)
+#     linecache.clearcache()
+#     return_line = linecache.getline("/home/sri/bots/testbot/modules/kpop.txt", randy).strip("\n")
+#     #bot.say(channel, "Quote %s/%s: " % (randy, totlines) + return_line)
+#     bot.say(channel, return_line)
+#     return
