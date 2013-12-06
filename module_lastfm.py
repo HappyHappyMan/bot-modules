@@ -105,11 +105,11 @@ def command_np(bot, user, channel, args):
             artist = ""
 
         if len(nowplaying) > 0:
-            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s/now' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
         else:
-            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 last listened to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s' %
+            bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 last listened to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s/now' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
             return
 
