@@ -15,7 +15,7 @@ def command_roll(bot, user, channel, args):
     num = args[:index]
     args = args[index+1:]
 
-    if int(num) < 16:
+    if int(args) < 16:
         arr = []
         for x in range(int(num)):
             arr.append(random.randint(1, int(args)))
@@ -44,3 +44,21 @@ def command_isup(bot, user, channel, args):
     else:
         bot.say(channel, "It's just you, %s, %s is up from here." % (nick, args))
     return
+
+def command_btc(bot, user, channel, args):
+    """Give it an abbreviation for a currency, like usd or jpy, and it will tell you how much of that currency one bitcoin is worth. Defaults to usd."""
+    import json
+    data = urllib2.urlopen("https://coinbase.com/api/v1/currencies/exchange_rates")
+    data = json.load(data)
+
+    try:
+        if args:
+            conv = 'btc_to_' + args
+        else:
+            conv = 'btc_to_usd'
+        rate = data[conv]
+    except KeyError:
+        bot.say(channel, "Not a valid currency.")
+        return
+
+    bot.say(channel, "1 btc is worth %s %s" % (rate.encode('utf-8'), conv[-3:]))

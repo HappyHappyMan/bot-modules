@@ -116,6 +116,7 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
 def _parse_args(args):
     """Parses an already-split args list and returns a list with location, unit type, and forecast type, in that order."""
     if len(args) > 1: # If there are any optional args at all
+        print "there are optional args"
         if args[1] in ["us", "si", "uk", "ca", "both"]: # If the first arg is for units, set up units
             if args[1] == "us":
                 args[1] = 0
@@ -187,20 +188,23 @@ def command_weather(bot, user, channel, args):
 
     if args:
         args = args.split(":")
+        print args
         latlng = _get_latlng(args[0])
         units = ""
         args = _parse_args(args)
 
-        if args[1] == "si":
+        print args[1]
+
+        if args[1] == 1:
             units = "?units=si"
             measure_type = 1
-        elif args[1] == "ca":
+        elif args[1] == 2:
             units = "?units=ca"
             measure_type = 2
-        elif args[1] == "uk":
+        elif args[1] == 3:
             units = "?units=uk"
             measure_type = 3
-        elif args[1] == "both":
+        elif args[1] == 4:
             units = "?units=us"
             measure_type = 4
 
@@ -235,7 +239,6 @@ def command_weather(bot, user, channel, args):
 
     print weather_data["currently"].keys()
 
-    city_name = latlng[1]
     weather_string = _parse_weather_output(weather_data, latlng[1], measure_type)
 
     bot.say(channel, weather_string.encode('utf-8'))
@@ -302,7 +305,7 @@ def command_forecast(bot, user, channel, args):
             bot.say(nick, line.encode('utf-8'))
 
 def command_wadd(bot, user, channel, args):
-    """Sets your location. Usage: .wadd location:units:forecast, Units can be any one of us, si, ca, uk. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
+    """Sets your location. Usage: .wadd location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
 
     settings = _import_yaml_data()
 
