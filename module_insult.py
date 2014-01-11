@@ -170,30 +170,35 @@ def command_insult(bot, user, channel, args):
             'transmisogynist',
         ]
     }
-    buildstr = ""
-    insult = random.choice(tumblrDictionary['insult'])
-    if "{privilegedNoun}" in insult:
-        insult = string.replace(insult, "{privilegedNoun}", random.choice(tumblrDictionary['privilegedNoun']))
-    buildstr = buildstr + insult + ', '
-    buildstr = buildstr + args + ', '
-    buildstr = buildstr + "you "
-    if random.random() > 0.3:
-        buildstr = buildstr + random.choice(tumblrDictionary['insultAdverb']) + ' '
-    if random.random() > 0.3:
-        if random.random() > 0.5:
-            choice = random.choice(tumblrDictionary['marginalizedIsm'])
-        else:
-            choice = random.choice(tumblrDictionary['marginalizedNoun'])
-    else:
-        if random.random() > 0.5:
-            choice = random.choice(tumblrDictionary['personalPrefixes']) + random.choice(tumblrDictionary['personalPostfixes'])
-        else:
-            choice = random.choice(tumblrDictionary['sexualPrefixes']) + random.choice(tumblrDictionary['sexualPostfixes'])
 
-        buildstr = buildstr + choice + '-' + random.choice(tumblrDictionary['marginalizedAdverb']) + ', '
+    rand = random.Random()
+
+    buildstr = ""
+
+    insult = rand.choice(tumblrDictionary['insult'])
+    if "{privilegedNoun}" in insult:
+        insult = string.replace(insult, "{privilegedNoun}", rand.choice(tumblrDictionary['privilegedNoun']))
+    buildstr = buildstr + insult + ', '
+    buildstr = buildstr + args.strip() + ', '
+    buildstr = buildstr + "you "
+
+    if rand.random() > 0.3:
+        buildstr = buildstr + rand.choice(tumblrDictionary['insultAdverb']) + ' '
+    if rand.random() > 0.3:
+        if rand.random() > 0.5:
+            choice = rand.choice(tumblrDictionary['marginalizedIsm'])
+        else:
+            choice = rand.choice(tumblrDictionary['marginalizedNoun'])
+    else:
+        if rand.random() > 0.5:
+            choice = rand.choice(tumblrDictionary['personalPrefixes']) + rand.choice(tumblrDictionary['personalPostfixes'])
+        else:
+            choice = rand.choice(tumblrDictionary['sexualPrefixes']) + rand.choice(tumblrDictionary['sexualPostfixes'])
+        buildstr = buildstr + choice + '-' + rand.choice(tumblrDictionary['marginalizedAdverb']) + ', '
         
-    buildstr = buildstr + random.choice(tumblrDictionary['privilegedNoun']) + '-' + random.choice(tumblrDictionary['privilegedAdverb']) + ' '
-    buildstr = buildstr + random.choice(tumblrDictionary['insultNoun']) + " " + random.choice(tumblrDictionary['privilegedIsm']) + ' '
+    buildstr = buildstr + rand.choice(tumblrDictionary['privilegedNoun']) + '-' + rand.choice(tumblrDictionary['privilegedAdverb']) + ' '
+    buildstr = buildstr + rand.choice(tumblrDictionary['insultNoun']) + " " + rand.choice(tumblrDictionary['privilegedIsm']) + ' '
 
 
     bot.say(channel, buildstr.upper())
+    return
