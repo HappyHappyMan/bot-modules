@@ -15,12 +15,16 @@ def command_roll(bot, user, channel, args):
     num = args[:index]
     args = args[index+1:]
 
-    if int(args) < 16:
+    if int(num) < 16:
         arr = []
         for x in range(int(num)):
             arr.append(random.randint(1, int(args)))
     else:
         bot.say(channel, "I'm sorry, I don't have that many dice, %s." % nick)
+        return
+
+    if int(args) > 20:
+        bot.say(channel, "I don't have a die with that many sides. Because those are expensive. Go buy some for me.")
         return
 
     if int(num) == 1:

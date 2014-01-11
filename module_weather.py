@@ -101,7 +101,7 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
             minTemp_c = str(round((weather_data['daily']['data'][x]['temperatureMin'] - 32) * 5/9, 2))
             maxTemp_c = str(round((weather_data['daily']['data'][x]['temperatureMax'] - 32) * 5/9, 2))
 
-            buildstr =  "%s: %s%s High: %s%s (%s%s) Low: %s%s (%s%s)" % (date, icon, summary, minTemp_f, u"°F", minTemp_c, u"°C", maxTemp_f, u"°F", maxTemp_c, u"°C")         
+            buildstr =  "%s: %s%s High: %s%s (%s%s) Low: %s%s (%s%s)" % (date, icon, summary, maxTemp_f, u"°F", maxTemp_c, u"°C", minTemp_f, u"°F", minTemp_c, u"°C")         
             forecast_list.append(buildstr)
 
         else:

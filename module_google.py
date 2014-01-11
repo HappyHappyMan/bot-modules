@@ -63,6 +63,7 @@ def command_google(bot, user, channel, args):
 
 def command_g(bot, user, channel, args):
     command_google(bot, user, channel, args)
+    return
 
 
 def command_lucky(bot, user, channel, args):
@@ -73,7 +74,8 @@ def command_lucky(bot, user, channel, args):
         channel = usersplit
 
     bot.say(channel, "%s \x02\x0312|\x03\x02 %s" % (result_dict['name'], result_dict['url']))
-
+    return
 
 def command_l(bot, user, channel, args):
     command_lucky(bot, user, channel, args)
+    return

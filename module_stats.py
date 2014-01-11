@@ -23,6 +23,12 @@ def command_stats(bot, user, channel, args):
     """Returns your usage stats (as near as can be approximated from your ident)"""
     SPECIAL_IDENTS = ["~Mibbit", "~quassel", "~androirc", "~kiwiirc", "Mibbit"]
     SPECIAL_CLOAK = "user/"
+
+    # Disable on channels the logger isn't set up for
+    if channel == "#safefromparadox":
+        bot.say(channel, "I'm sorry, this module isn't available on this channel.")
+        return
+
     real_ident = user.split("!")[1].split("@")[0]
     hostmask = user.split("@")[1]
     settings = _import_yaml_data()
