@@ -4,7 +4,6 @@
 import BeautifulSoup as bs
 import urllib2
 import HTMLParser
-import re
 
 UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
 
@@ -14,13 +13,13 @@ def command_ud(bot, user, channel, args):
     queryWord = args.split(" ")[0]
 
     try:
-        defNum = int(args.split(" ")[-1])
+        defNum = int(args.split(" ")[-1]) - 1
         print "num specified"
         numGiven = True
     except ValueError:
         print "num not specified"
         numGiven = False
-        defNum = 1
+        defNum = 0
 
     queryWord = ""
     if numGiven is True:
@@ -40,35 +39,39 @@ def command_ud(bot, user, channel, args):
     
     entries = soup.findAll(attrs={'id':'entries'})
     try:
-        defs = entries[0].findAll(attrs={'id':re.compile(r'entry_*')})
+        defs = entries[0].findAll(attrs={'class':'definition'})
     except IndexError:
         if 'tripgod' in user.split('!', 1)[0]:
             bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
         return
 
-    shortlinks = entries[0].findAll(attrs={'class':'index'})
+    shortlinkHtml = entries[0].findAll(attrs={'class':'word'})[defNum]
+    defidIndex = shortlinkHtml.a['href'].index('defid=')
+    shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), shortlinkHtml.a['href'][defidIndex:])
     numResults = len(defs)
 
-    defComplete = defs[defNum - 1].findAll(attrs={'class':'definition'})[0].findAll(text=True)
-    shortlink = shortlinks[defNum - 1]['href']
+    try:
+        defText = defs[defNum].text
+    except IndexError:
+        bot.say(channel, "Invalid number.")
+        return
 
-    ## time to build up the complete definition from any and all links
-    defText = ""
-    for item in defComplete:
-        defText = defText + item
+    defText = HTMLParser.HTMLParser().unescape(defText)
+    print defText
 
-    textLen = 300 - (44 + len(shortlink))
-    if len(defText) > textLen:
-        trunclen = textLen - 1
+    maxLen = 316
+    textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText) ## so that everything fits in one msg
+    if textLen > maxLen:
+        truncLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3
         while True:
-            if defText[trunclen] == " ":
+            if defText[truncLen] == " ":
                 break
             else:
-                trunclen = trunclen - 1
+                truncLen = truncLen - 1
                 continue
-        defText = defText[:trunclen] + "..."
-    defText = HTMLParser.HTMLParser().unescape(defText)
-    returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum, numResults, defText, shortlink)
+        defText = defText[:truncLen] + "..."
+
+    returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum + 1, numResults, defText, shortlink)
 
     usersplit = user.split('!', 1)[0]
     if channel == user:
