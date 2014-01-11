@@ -1,90 +1,38 @@
 # -*- encoding: utf-8 -*-
 
-###TODO###
-##Test assumption of line 77##
 
 import os
 import os.path
-import sys
-import re
+import yaml
+import json
 import random
-import fnmatch
-import linecache
+import requests
 
 
 
-def file_len(fname):
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-        return i + 1
+def _import_yaml_data(directory=os.curdir):
+    try:
+        settings_path = os.path.join(directory, "modules", "google.settings")
+        return yaml.load(file(settings_path))
+    except OSError:
+            print "Settings file for Google not set up; please create a Google API account and modify the example settings file."
+            return
 
-# def command_addkpop(bot, user, channel, args):
-#     """adds quote to db. Usage: .qadd <quote goes here, don't use any chevrons>"""
+def command_kpop(bot, user, channel, args):
+    settings = _import_yaml_data()
 
+    playlist_id = "FLlLK27LylBLwFwGjhzKIwJg"
 
-#     if not args:
-#         return bot.say(user, "Try again please")
+    request_url = "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&maxResults=50&playlistId=%s&key=%s" % (playlist_id, settings['google']['yt_key'])
+    request_url = request_url.encode('utf-8')
 
-#     args = args.split(" ")
-#     for arg in args:
-#         result = heavy_lifting(arg)
-#         if result == 3:
-#             bot.say(user, "%s seems to be private!" % (arg))
-#         elif result == 0:
-#             bot.say(user, "Video %s too recent, no data for it yet!" % (arg))
-#         elif result == 5:
-#             bot.say(user, "Youtube videos only, please!")
-#         else:
-#             with open("/home/sri/kpop.txt", "a") as quotestxt:
-#                 quotestxt.write(result.encode('utf-8') + "\n")
-#             quotestxt.close()
-#             bot.say(user, "Video added!")
-            
+    result = requests.get(request_url)
+    print result.status_code
 
-    #bot.say(channel, "Video(s) successfully added")
-    #return
+    result_json = json.loads(result.content.encode('utf-8'))
 
-def heavy_lifting(url):
-    gdata_url = "http://gdata.youtube.com/feeds/api/videos/%s"
+    choice = random.choice(result_json['items'])
+    vidId = choice['snippet']['resourceId']['videoId'].encode('utf-8')
+    title = choice['snippet']['title'].encode('utf-8')
 
-    match = re.match("https?://youtu.be/(.*)", url)
-    if not match:
-        match = re.match("https?://.*?youtube.com/watch\?.*?v=([^&]+)", url)
-    if match:
-        infourl = gdata_url % match.group(1)
-        bs = getUrl(infourl, True).getBS()
-
-        entry = bs.first("entry")
-
-
-        if not entry:
-            #log.info("Video too recent, no info through API yet.")
-            #bot.say(user, "video too recent, no info through API yet.")
-            return 0
-        ##test out this if condition
-        if bs.string == "Private Video":
-            #log.info("video either doesn't exist or is private, follow up")
-            #bot.say(user, infourl + " needs to be checked up on, video either doesn't exist or is private")
-            return 3
-        else:
-            media = entry.first("media:group")
-            title = media.first("media:title").string
-            return "%s | %s" % (url, title)
-    else:
-        return 5
-
-
-# def command_kpop(bot, user, channel, args):
-#     """Returns a random video link from the database."""
-
-#     #args = args.split(" ", 1)
-
-#     totlines = file_len("/home/sri/bots/testbot/modules/kpop.txt")
-
-#     randy = random.randint(1, totlines)
-#     linecache.clearcache()
-#     return_line = linecache.getline("/home/sri/bots/testbot/modules/kpop.txt", randy).strip("\n")
-#     #bot.say(channel, "Quote %s/%s: " % (randy, totlines) + return_line)
-#     bot.say(channel, return_line)
-#     return
+    bot.say(channel, "http://www.youtube.com/watch?v=%s \x034|\x03 %s" % (vidId, title))
