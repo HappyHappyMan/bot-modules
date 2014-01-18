@@ -1,395 +1,67 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 """
-Parse RSS feeds and display new entries on channel
+RSS rotator, improved version.
 
-@author Henri 'fgeek' Salo <henri@nerv.fi>, Tomi 'dmc' Nykänen,
-Riku 'Shrike' Lindblad
-@copyright Copyright (c) 2010-2013 pyfibot developers
-@licence BSD
-
-Possible output syntax:
-    0 == feed_title: title - url
-    1 == feed_title: title - shorturl
-    2 == feed_title: title (id)
-    3 == feed_title: title
-    4 == title
-
-Config format:
-    database: rss.db
-    delays:
-      rss_sync: 300  # How often we synchronize rss-feeds in seconds
-      output: 7  # Delay in output to channels in seconds
-    output_syntax: 0
-    bitly_api_key:  # Only needed if using shorturl format
-
-With output_syntax #2 you could get url via .url <id>
-
+Only works with Reddit feeds now, but that's okay, since
+nobody needs RSS feeds of anything else.
 """
 
-from __future__ import print_function, division
 from threading import Thread
+import requests
+import time
+import os
+import json
+import HTMLParser
 import logging
 import logging.handlers
-import os
-import re
-import requests
-import sqlite3
-import sys
-import traceback
-import HTMLParser
-import json
 
 try:
     import feedparser
     from twisted.internet import reactor
     import yaml
-    import htmlentitydefs
     init_ok = True
 except ImportError, error:
-    print('Error starting rss module: %s' % error)
+    print("Error starting rss module: %s" % error)
     init_ok = False
 
-log = logging.getLogger('rss')  # Initialize logger
-t = None
-t2 = None
-indexfeeds_callLater = None
-output_callLater = None
-rssconfig = None
+log = logging.getLogger('rss') 
 
+### Globals, sigh...###
+global timestamp_dict
 
 def event_signedon(bot):
-    """Starts rotators"""
-    global indexfeeds_callLater, output_callLater, rssconfig
-    if not init_ok:
-        log.error("Config not ok, not starting rotators")
-        return False
-    if (empty_database > 0):
-        if (indexfeeds_callLater != None):
-            log.info("Stopping previous indexfeeds thread")
-            indexfeeds_callLater.cancel()
-        rotator_indexfeeds(bot, rssconfig["delays"]["rss_sync"])
-        if (output_callLater != None):
-            log.info("Stopping previous output thread")
-            output_callLater.cancel()
-        rotator_output(bot, rssconfig["delays"]["output"])
-
-
-def init(botconfig):
-    """Creates database if it doesn't exist"""
-    if not init_ok:
-        log.error("Config not ok, skipping init")
-        return False
-
-    global rssconfig
-    # Read configuration
-    configfile = os.path.join(sys.path[0], 'modules', 'module_rss.conf')
-    rssconfig = yaml.load(file(configfile))
-
-    db_conn = sqlite3.connect(rssconfig["database"])
-    d = db_conn.cursor()
-    d.execute("CREATE TABLE IF NOT EXISTS feeds (id INTEGER PRIMARY KEY,feed_url TEXT,channel TEXT,feed_title TEXT, output_syntax_id INTEGER);")
-    d.execute("CREATE TABLE IF NOT EXISTS titles_with_urls (id INTEGER PRIMARY KEY,feed_url TEXT,title TEXT,url TEXT UNIQUE,channel TEXT,printed INTEGER);")
-    db_conn.commit()
-    # Check if database is empty
-    global empty_database
-    empty_database = d.execute("SELECT COUNT(*) FROM feeds").fetchone()[0]
-    d.close()
-
-
-def rss_addfeed(bot, user, channel, feed_url, output_syntax):
-    """Adds RSS-feed to sqlite-database"""
-    global empty_database
-    try:
-        feed_data = feedparser.parse(feed_url)
-        feed_title = feed_data['feed']['title']
-    except KeyError, e:
-        return bot.say(channel, "Nothing inserted to database. Probably you mistyped URL?")
-    # Initialize connection to database-file
-    db_conn = sqlite3.connect(rssconfig["database"])
-    d = db_conn.cursor()
-
-    # Lets create scheme if the database-file does not exist
-    try:
-        fileinfo = os.stat(rssconfig["database"])
-
-        if not os.path.isfile(rssconfig["database"]) or fileinfo.st_size == 0:
-            d.execute("CREATE TABLE feeds int primary key unique, url text)")
-            db_conn.commit()
-            bot.say(channel, "Database \"%s\" created." % rssconfig["database"])
-    except Exception, e:
-        bot.say(channel, "Error: %s" % e)
-
-    d.execute("SELECT * FROM feeds WHERE feed_url = ? AND channel = ?", (feed_url, channel, ))
-    already_on_db = d.fetchone()
-    if already_on_db is None:
-        data = [None, feed_url, channel, feed_title, output_syntax]
-        d.execute("INSERT INTO feeds VALUES (?, ?, ?, ?, ?)", data)
-        db_conn.commit()
-        d.close()
-        if (empty_database == 0):
-            rotator_indexfeeds(bot, rssconfig["delays"]["rss_sync"])
-            rotator_output(bot, rssconfig["delays"]["output"])
-            empty_database = 1
-            return bot.say(channel, "Url \"%s\" inserted to database." % feed_url)
-    else:
-        id = already_on_db[0]
-        return bot.say(channel, "Url \"%s\" is already on database with ID: %i" % (feed_url, id))
-
-
-def rss_delfeed(bot, user, channel, args):
-    """Deletes RSS-feed from sqlite-database by given ID. Should have support for deletion using ID or feed's URL"""
-    db_conn = sqlite3.connect(rssconfig["database"])
-    d = db_conn.cursor()
-
-    d.execute("SELECT id, feed_url, channel FROM feeds WHERE id = ? OR feed_url = ?", (args, args,))
-    row = d.fetchone()
-    feed_url = row[1]
-    if (db_conn.execute("DELETE FROM feeds WHERE channel = ? AND id = ? OR channel = ? AND feed_url = ?", (channel, args, channel, args)).rowcount == 1):
-        db_conn.commit()
-        bot.say(channel, "Feed %s deleted successfully" % feed_url.encode("UTF-8"))
-    d.close()
-
-
-def list_feeds(channel):
-    """Lists channels (or all) RSS-feeds from sqlite-database. Initialize connection to database-file"""
-    db_conn = sqlite3.connect(rssconfig["database"])
-    d = db_conn.cursor()
-
-    feeds = []
-    if (channel == -1):
-        d.execute("SELECT id, feed_url, channel FROM feeds ORDER BY id")
-    else:
-        d.execute("SELECT id, feed_url, channel FROM feeds WHERE channel = ? ORDER BY id", (channel,))
-    for row in d:
-        id = row[0]
-        feed_url = row[1]
-        feed_url = feed_url.encode('UTF-8')
-        channel = row[2]
-        data = [id, feed_url, channel]
-        feeds.append(data)
-    d.close()
-    return feeds
-
-
-def rss_modify_feed_setting(bot, feed_ident, channel, target, tvalue):
-    """Modifies feed's settings"""
-    db_conn = sqlite3.connect(rssconfig["database"])
-    d = db_conn.cursor()
-    d.execute("SELECT id, feed_url FROM feeds WHERE id = ? OR feed_url = ?", (feed_ident, feed_ident,))
-    row = d.fetchone()
-    feed_url = row[1].encode("UTF-8")
-    if (target == "title"):
-        if (db_conn.execute("UPDATE feeds SET feed_title = ? WHERE id = ? OR feed_url = ? AND channel = ?", (tvalue, feed_ident, feed_ident, channel)).rowcount == 1):
-            db_conn.commit()
-            bot.say(channel, "Feed's (%s) title modified to \"%s\"" % (feed_url, tvalue.encode("UTF-8")))
-    elif (target == "syntax"):
-        if (db_conn.execute("UPDATE feeds SET output_syntax_id = ? WHERE id = ? OR feed_url = ? AND channel = ?", (tvalue, feed_ident, feed_ident, channel)).rowcount == 1):
-            db_conn.commit()
-            bot.say(channel, "Feed's (%s) output syntax modified to \"%s\"" % (feed_url, tvalue.encode("UTF-8")))
-    else:
-        bot.say(channel, "Invalid syntax! Usage: Add feed: .rss add <feed_url>, Delete feed: .rss del <feed_url/feed_id>, List feeds: .rss list, Change feed settings: .rss set <feed_id/feed_url> title/syntax <value>")
-        d.close()
-
-
-def rss_listfeeds(bot, user, channel, args):
-    """Lists all RSS-feeds added to channel"""
-    feeds = list_feeds(channel)
-    for feed in feeds:
-        bot.say(channel, "%s: %s" % (feed[0], feed[1]))
-
-
-def command_rss(bot, user, channel, args):
-    """Usage: Add feed: .rss add <feed_url>, Delete feed: .rss del <feed_url/feed_id>, List feeds: .rss list, Change feed settings: .rss set <feed_id/feed_url> title/syntax <value>"""
-    try:
-        args = args.split()
-        subcommand = args[0]
-        if (subcommand != "list"):
-            feed_ident = args[1]
-        if (isAdmin(user)):
-            if (subcommand == "add"):
-                if (len(args) > 2):
-                    output_syntax = args[2]
-                else:
-                    output_syntax = rssconfig["output_syntax"]
-                rss_addfeed(bot, user, channel, feed_ident, output_syntax)
-            elif (subcommand == "del"):
-                rss_delfeed(bot, user, channel, feed_ident)
-            elif (subcommand == "list"):
-                rss_listfeeds(bot, user, channel, None)
-            elif (subcommand == "set"):
-                target = args[2]
-                tvalue = args[3]
-                if (target == "title"):
-                    rss_modify_feed_setting(bot, feed_ident, channel, "title", tvalue)
-                elif (target == "syntax"):
-                    rss_modify_feed_setting(bot, feed_ident, channel, "syntax", tvalue)
-            else:
-                bot.say(channel, "Invalid syntax! Usage: Add feed: .rss add <feed_url>, Delete feed: .rss del <feed_url/feed_id>, List feeds: .rss list, Change feed settings: .rss set <feed_id/feed_url> title/syntax <value>")
-    except IndexError:
-        bot.say(channel, "Invalid syntax! Usage: Add feed: .rss add <feed_url>, Delete feed: .rss del <feed_url/feed_id>, List feeds: .rss list, Change feed settings: .rss set <feed_id/feed_url> title/syntax <value>")
-
-
-def shorturl(url):
-    try:
-        payload = {
-            'access_token': rssconfig["bitly_api_key"],
-            'longUrl': url
-        }
-        r = requests.get("https://api-ssl.bitly.com/v3/shorten", params=payload)
-        if r.status_code == int('500'):
-            log.error('Error in bitly functionality. Check if login or API key is missing from configuration.')
-            return
-        if r.status_code == int('200'):
-            return r.json['data']['url']
-    except Exception:
-        log.error(traceback.format_exc())
-
-
-def unescape(text):
-    """Unescape ugly wtf-8-hex-escaped chars."""
-    def fixup(m):
-        text = m.group(0)
-        if text[:2] == "&#":
-            # character reference
-            try:
-                if text[:3] == "&#x":
-                    return unichr(int(text[3:-1], 16))
-                else:
-                    return unichr(int(text[2:-1]))
-            except ValueError:
-                pass
-        else:
-            # named entity
-            try:
-                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
-            except KeyError:
-                pass
-        return text  # leave as is
-    return re.sub("&#?\w+;", fixup, text)
-
-
-def remove_html_tags(data):
-    p = re.compile(r'<.*?>')
-    return p.sub('', data)
-
-
-def sqlite_add_item(bot, feed_url, title, url, channel, cleanup):
-    """Adds item with feed-url, title, url, channel and marks it as non-printed"""
-
-    if not feed_url and title and url:
-        log.debug('Arguments missing in sqlite_add_item.')
+    """Starts rotator, triggered when bot signs on to network"""
+    if bot.nickname == "Lazybot_v3":
         return
-    try:
-        db_conn = sqlite3.connect(rssconfig["database"])
-        d = db_conn.cursor()
-        hash_string = url + "?channel=" + channel
-        data = [None, feed_url, title, url, channel, cleanup]
-        d.execute("INSERT INTO titles_with_urls VALUES (?, ?, ?, ?, ?, ?)", data)
-        log.info('Added title \"%s\" with URL \"%s\" (%s) to channel %s to database.' % (title, url, feed_url, channel))
-        id = d.lastrowid
-        db_conn.commit()
-        db_conn.close()
-    except sqlite3.IntegrityError, e:
-        # Couldn't add entry twice
-        return
-    except Exception:
-        log.error('Error in sqlite_add_item')
-        log.error(traceback.format_exc())
-        pass
 
+    settings = _import_yaml_data()
+    current_time = time.mktime(time.gmtime(time.time()))
 
-def indexfeeds(bot):
-    """Updates all RSS-feeds found on database and outputs new elements"""
-    try:
-        cleanup = 0
-        log.debug("indexfeeds thread started")
-        db_conn = sqlite3.connect(rssconfig["database"])
-        d = db_conn.cursor()
-        # If table is removed, then create a new one
-        titles_table_exists = d.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='titles_with_urls'").fetchone()
-        if (titles_table_exists[0] == 0):
-            init(None)
-        # Let's count all rows to index
-        rowcount = 0
-        rows = d.execute("SELECT id, feed_url, channel FROM feeds ORDER BY id")
-        for row in rows:
-            rowcount = rowcount + 1
-        log.debug('Feed count is: %i' % rowcount)
-        feeds = list_feeds(-1)
-        for feed in feeds:
-            id = feed[0]
-            feed_url = feed[1]
-            log.debug('Indexing feed %s: %s' % (id, feed_url))
-            channel = feed[2]
-            # If first run of current feed, insert new elements as "printed" so bot won't flood whole feed on startup/insert
-            cleanup = 0
-            titles_count = d.execute("SELECT count(*) FROM titles_with_urls WHERE feed_url = ?", (feed_url,)).fetchone()
-            if (titles_count[0] == 0):
-                cleanup = 1
+    global timestamp_dict
 
-            feed_data = feedparser.parse(feed_url)
-            feed_data.entries.reverse()
-            for entry in feed_data.entries:
-                try:
-                    title = remove_html_tags(entry['title'])
-                    url = entry['link']
-                    sqlite_add_item(bot, feed_url, title, url, channel, cleanup)
-                except KeyError, e:
-                    log.debug('indexfeeds: Keyerror %s' % e)
-                except Exception, e:
-                    log.debug('indexfeeds first: Exception %s' % e)
-        db_conn.close()
-        log.debug("indexfeeds thread terminated")
-    except Exception:
-        log.error('Error in indexfeeds')
-        log.error(traceback.format_exc())
+    timestamp_dict = {}
 
-
-def command_url(bot, user, channel, args):
-    """Prints feed's element url by given id"""
-    id = args
-    try:
-        db_conn = sqlite3.connect(rssconfig["database"])
-        d = db_conn.cursor()
-        d.execute("SELECT * FROM titles_with_urls WHERE id = ?", (id,))
-        row = d.fetchone()
-        if (row != None):
-            id = row[0]
-            feed_url = row[1]
-            title = row[2]
-            url = row[3]
-            channel = row[4].encode("UTF-8")
-            url = url.encode("UTF-8")
-            bot.say(channel, "%s" % (url))
-    except Exception:
-        log.error('Error in command_url')
-        log.error(traceback.format_exc())
+    for channel in settings['channels'].keys(): # Initialize timestamps to current time
+        timestamp_dict[channel] = {}
+        for url in settings['channels'][channel]:
+            timestamp_dict[channel][url] = current_time
+    delay = settings['delay']
+    rotator(bot, delay) # Sends the rotator off and spinning
 
 def get_reddit_api(url):
-    # url = urllib.quote(url)
-    if url[-1] != "/":
-        ending = "/.json"
-    else:
-        ending = ".json"
-    json_url = url + ending
-
-    log.debug(json_url)
-
-    log.debug(str(type(json_url)))
 
     headers_lib = {}
     headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
-    #content_request = urllib2.Request(json_url, None, headers_lib)
-    content = requests.get(json_url, headers=headers_lib)
-    log.debug(content.status_code)
+
+    content = requests.get(url, headers=headers_lib)
     api_return = json.loads(content.content.encode('utf-8'))
 
     if not content:
-        log.debug("No content received")
-        return
+        log.info("No content received for url " + url)
+        return "", 0
     data = api_return[0]['data']['children'][0]['data']
+    timestamp = data['created_utc']
     title = HTMLParser.HTMLParser().unescape(data['title'])
     author = data['author']
     subreddit = data['subreddit']
@@ -399,83 +71,119 @@ def get_reddit_api(url):
     result = "\x02r/%s/new\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s" % (subreddit, title, author, link)
     if over_18 is True:
         result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
-    return result
+    return result, timestamp
 
-def output(bot):
-    """This function is launched from rotator to collect and announce new items from feeds to channel"""
+def process_rss(bot):
+    log.debug("RSS processing started")
+
+    global timestamp_dict
+
+    settings = _import_yaml_data()
+    chans = settings['channels']
+    result_dict = {}
+    
+    for channel in chans.keys():
+        result_dict[channel] = []
+        ## This handles issues when you add a new feed ##
+        for url in chans[channel]:
+            try:
+                timestamp_dict[channel][url]
+            except KeyError:
+                timestamp_dict[channel][url] = time.mktime(time.gmtime(time.time()))
+
+            feed_data = feedparser.parse(url)
+            log.debug("Now retrieving " + url)
+
+            for entry in feed_data.entries:
+                if (time.mktime(entry['updated_parsed']) > timestamp_dict[channel][url]):
+                    log.debug("We have a new item! Hooray!")
+                    result_str, timestamp = get_reddit_api(entry['link'] + ".json")
+                    result_dict[channel].append(result_str)
+            ## This line updates the timestamp for the next go-around ## 
+            timestamp_dict[channel][url] = time.mktime(feed_data.entries[0]['updated_parsed'])
+
+    for channel in result_dict:
+        log.debug(len(result_dict[channel]))
+        if len(result_dict[channel]) > 0:
+            for x in range(len(result_dict[channel])):
+                bot.say(channel, result_dict[channel][x].encode('utf-8'))
+                time.sleep(0.75)
+    return
+
+def rotator(bot, delay):
+    """Starts up the rotator"""
     try:
-        db_conn = sqlite3.connect(rssconfig["database"])
-        d = db_conn.cursor()
-        d.execute("SELECT * FROM titles_with_urls WHERE printed='0'")
-        row = d.fetchone()
-        if (row != None):
-            log.debug("New row found for output")
-            id = row[0]
-            feed_url = row[1]
-            feed_output_syntax = d.execute("SELECT output_syntax_id FROM feeds WHERE feed_url = ?", (feed_url,)).fetchone()[0]
-            if (feed_output_syntax == None):
-                feed_output_syntax = rssconfig["output_syntax"]
-            title = row[2]
-            url = row[3]
-            channel = row[4]
-            title = unicode(unescape(title)).encode('utf-8')
-            channel = channel.encode('utf-8')
-            url = url.encode('utf-8')
-            feed_title = d.execute("SELECT feed_title from feeds where feed_url = ?", (feed_url,)).fetchone()[0].encode('utf-8')
-            if (feed_output_syntax == 0):
-                bot.say(channel, "%s: %s – %s" % (feed_title, title, url))
-            elif (feed_output_syntax == 1):
-                bot.say(channel, "%s: %s – %s" % (feed_title, title, shorturl(url)))
-            elif (feed_output_syntax == 2):
-                bot.say(channel, "%s: %s (%i)" % (feed_title, title, id))
-            elif (feed_output_syntax == 3):
-                bot.say(channel, "%s: %s" % (feed_title, title))
-            elif (feed_output_syntax == 4):
-                title = get_reddit_api(url)
-                bot.say(channel, "%s" % title.encode('utf-8'))
-            data = [row[3], row[4]]
-            d.execute("UPDATE titles_with_urls SET printed=1 WHERE URL=? and channel=?", data)
-            db_conn.commit()
-            log.debug("output thread terminated cleanly")
-    except StopIteration:
-        pass
+        t = Thread(target=process_rss, args=(bot,))
+        t.daemon = True
+        t.start()
+        t.join()
+        reactor.callLater(delay, rotator, bot, delay)
     except Exception:
-        log.error('Error in output')
-        log.error(traceback.format_exc())
-        pass
+        log.error("Rotator error")
 
-
-
-def rotator_indexfeeds(bot, delay):
-    """Timer for methods/functions"""
+def _import_yaml_data(directory=os.curdir):
     try:
-        global t, t2, indexfeeds_callLater
-        if (type(t2).__name__ == 'NoneType'):
-            t = Thread(target=indexfeeds, args=(bot,))
-            t.daemon = True
-            t.start()
-        elif t2.isAlive() == False:
-            t = Thread(target=indexfeeds, args=(bot,))
-            t.daemon = True
-            t.start()
-        if (empty_database > 0):
-            indexfeeds_callLater = reactor.callLater(delay, rotator_indexfeeds, bot, delay)
-    except Exception:
-        log.error('Error in rotator_indexfeeds')
-        log.error(traceback.format_exc())
+        settings_path = os.path.join(directory, "rss.settings")
+        return yaml.load(file(settings_path))
+    except OSError:
+        log.error("Settings file for rss not set up; please create an empty rss.settings file.")
+        return
 
-
-def rotator_output(bot, delay):
-    """Timer for methods/functions"""
+def _yaml_dump(settings_file, directory=os.curdir):
     try:
-        global t, t2, output_callLater
-        if t.isAlive() == False:
-            t2 = Thread(target=output, args=(bot,))
-            t2.daemon = True
-            t2.start()
-            t2.join()
-        if (empty_database > 0):
-            output_callLater = reactor.callLater(delay, rotator_output, bot, delay)
-    except Exception, e:
-        log.error('Error in rotator_output')
-        log.error(traceback.format_exc())
+        settings_path = os.path.join(directory, "rss.settings")
+        stream = file(settings_path, 'w')
+        yaml.dump(settings_file, stream)
+    except OSError:
+        log.error("Settings file for rss not set up; please create an empty rss.settings file.")
+    return
+
+def _add_rss_feed(bot, channel, feed_url):
+    """Adds RSS feeds to the database"""
+    settings = _import_yaml_data()
+    try:
+        settings['channels'][channel].append(feed_url)
+        _yaml_dump(settings)
+    except KeyError:
+        settings['channels'][channel] = []
+        settings['channels'][channel].append(feed_url)
+    return
+
+def _list_rss_feed(bot, channel):
+    settings = _import_yaml_data()
+
+    url_list = settings['channels'][channel]
+    for x in range(len(url_list)):
+        bot.say(channel, "%s: %s" % (x, url_list[x]))
+    return
+
+def _del_rss_feed(bot, channel, feed_num):
+    settings = _import_yaml_data()
+    try:
+        feed_num = int(feed_num)
+        settings['channels'][channel].remove(settings['channels'][channel][feed_num])
+        _yaml_dump(settings)
+    except KeyError:
+        bot.say(channel, "No RSS feeds in this channel.")
+    except ValueError:
+        bot.say(channel, "Feed URL not found, please recheck .rss list")
+    return
+
+
+def command_rss(bot, user, channel, args):
+    """Usable only by bot mods, rss feed management"""
+    args = args.split()
+    subcommand = args[0]
+    if (isAdmin(user)):
+        if (subcommand == "list"):
+            _list_rss_feed(bot, channel)
+        elif (subcommand == "add"):
+            feed_url = args[1]
+            _add_rss_feed(bot, channel, feed_url)
+        elif (subcommand == "del"):
+            feed_num = args[1]
+            _del_rss_feed(bot, channel, feed_num)
+        return
+    else:
+        bot.say(channel, "You are not authorized to use this command.")
+        return
