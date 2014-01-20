@@ -2,11 +2,11 @@
 
 
 import BeautifulSoup as bs
-import urllib2
+import requests
 import HTMLParser
+import logging
 
 UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
-
 
 def command_ud(bot, user, channel, args):
     """.ud word def#. ie, to get the second definition for the word Google, you'd type .ud Google 2. Defaults to the first definition, if no number is given."""
@@ -14,10 +14,8 @@ def command_ud(bot, user, channel, args):
 
     try:
         defNum = int(args.split(" ")[-1]) - 1
-        print "num specified"
         numGiven = True
     except ValueError:
-        print "num not specified"
         numGiven = False
         defNum = 0
 
@@ -29,35 +27,30 @@ def command_ud(bot, user, channel, args):
         for word in args.split(" ")[:]:
             queryWord = queryWord + word + "+"
 
-    print queryWord
-    print defNum
+    urlobj = requests.get(UD_URL % queryWord)
 
-    urlobj = urllib2.urlopen(UD_URL % queryWord)
+    soup = bs.BeautifulSoup(urlobj.content.encode('utf-8'))
 
-    soup = bs.BeautifulSoup(urlobj.read())
-
-    
-    entries = soup.findAll(attrs={'id':'entries'})
-    try:
-        defs = entries[0].findAll(attrs={'class':'definition'})
-    except IndexError:
+    defs = soup.findAll(attrs={'class':'box'})
+    numResults = len(defs)
+    if numResults < 1:
         if 'tripgod' in user.split('!', 1)[0]:
             bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
+        else:
+            bot.say(channel, "Word not found.")
         return
 
-    shortlinkHtml = entries[0].findAll(attrs={'class':'word'})[defNum]
-    defidIndex = shortlinkHtml.a['href'].index('defid=')
-    shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), shortlinkHtml.a['href'][defidIndex:])
-    numResults = len(defs)
-
     try:
-        defText = defs[defNum].text
+        definition = defs[defNum]
     except IndexError:
         bot.say(channel, "Invalid number.")
         return
+    defId = definition.a['data-defid']
+    shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
+
+    defText = definition.find(attrs={'class':'definition'}).text
     defText = HTMLParser.HTMLParser().unescape(defText)
-    print defText
 
     maxLen = 316
     textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText) ## so that everything fits in one msg
