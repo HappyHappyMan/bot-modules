@@ -7,7 +7,7 @@ Only works with Reddit feeds now, but that's okay, since
 nobody needs RSS feeds of anything else.
 """
 
-from threading import Thread
+import threading
 import requests
 import time
 import os
@@ -26,6 +26,7 @@ except ImportError, error:
     init_ok = False
 
 log = logging.getLogger('rss') 
+lock = threading.Lock()
 
 ### Globals, sigh...###
 global timestamp_dict
@@ -49,18 +50,9 @@ def event_signedon(bot):
     delay = settings['delay']
     rotator(bot, delay) # Sends the rotator off and spinning
 
-def get_reddit_api(url):
+def get_reddit_api(data):
 
-    headers_lib = {}
-    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
-
-    content = requests.get(url, headers=headers_lib)
-    api_return = json.loads(content.content.encode('utf-8'))
-
-    if not content:
-        log.info("No content received for url " + url)
-        return "", 0
-    data = api_return[0]['data']['children'][0]['data']
+    
     timestamp = data['created_utc']
     title = HTMLParser.HTMLParser().unescape(data['title'])
     author = data['author']
@@ -81,6 +73,8 @@ def process_rss(bot):
     settings = _import_yaml_data()
     chans = settings['channels']
     result_dict = {}
+    headers_lib = {}
+    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
     
     for channel in chans.keys():
         result_dict[channel] = []
@@ -91,29 +85,33 @@ def process_rss(bot):
             except KeyError:
                 timestamp_dict[channel][url] = time.mktime(time.gmtime(time.time()))
 
-            feed_data = feedparser.parse(url)
-            log.debug("Now retrieving " + url)
+            feed = requests.get(url, headers=headers_lib)
+            feed_data = json.loads(feed.content.encode('utf-8'))
 
-            for entry in feed_data.entries:
-                if (time.mktime(entry['updated_parsed']) > timestamp_dict[channel][url]):
+            for entry in feed_data['data']['children']:
+                log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
+                log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
+                if (entry['data']['created_utc'] > timestamp_dict[channel][url]):
                     log.debug("We have a new item! Hooray!")
-                    result_str, timestamp = get_reddit_api(entry['link'] + ".json")
+                    result_str, timestamp = get_reddit_api(entry['data'])
                     result_dict[channel].append(result_str)
-            ## This line updates the timestamp for the next go-around ## 
-            timestamp_dict[channel][url] = time.mktime(feed_data.entries[0]['updated_parsed'])
+            ## This line updates the timestamp for the next go-around ##
+            with lock:
+                log.debug("Lock acquired")
+                log.info("Now setting timestamp in timestamp_dict to be " + str(feed_data['data']['children'][0]['data']['created_utc']) + " for url " + url + " in channel " + channel) 
+                timestamp_dict[channel][url] = feed_data['data']['children'][0]['data']['created_utc']
 
     for channel in result_dict:
-        log.debug(len(result_dict[channel]))
+        log.debug(str(len(result_dict[channel])) + " results in " + channel)
         if len(result_dict[channel]) > 0:
             for x in range(len(result_dict[channel])):
                 bot.say(channel, result_dict[channel][x].encode('utf-8'))
-                time.sleep(0.75)
     return
 
 def rotator(bot, delay):
     """Starts up the rotator"""
     try:
-        t = Thread(target=process_rss, args=(bot,))
+        t = threading.Thread(target=process_rss, args=(bot,))
         t.daemon = True
         t.start()
         t.join()
