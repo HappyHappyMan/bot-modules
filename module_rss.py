@@ -15,10 +15,10 @@ import json
 import HTMLParser
 import logging
 import logging.handlers
+import Queue
 
 try:
-    import feedparser
-    from twisted.internet import reactor
+    from twisted.internet import reactor, task
     import yaml
     init_ok = True
 except ImportError, error:
@@ -27,14 +27,15 @@ except ImportError, error:
 
 log = logging.getLogger('rss') 
 lock = threading.Lock()
+q = Queue.LifoQueue()
+event = threading.Event()
+_sentinel = object()
 
 ### Globals, sigh...###
 global timestamp_dict
 
 def event_signedon(bot):
     """Starts rotator, triggered when bot signs on to network"""
-    if bot.nickname == "Lazybot_v3":
-        return
 
     settings = _import_yaml_data()
     current_time = time.mktime(time.gmtime(time.time()))
@@ -48,7 +49,8 @@ def event_signedon(bot):
         for url in settings['channels'][channel]:
             timestamp_dict[channel][url] = current_time
     delay = settings['delay']
-    rotator(bot, delay) # Sends the rotator off and spinning
+    l = task.LoopingCall(process_rss, bot)
+    l.start(delay)
 
 def get_reddit_api(data):
 
@@ -85,21 +87,29 @@ def process_rss(bot):
             except KeyError:
                 timestamp_dict[channel][url] = time.mktime(time.gmtime(time.time()))
 
-            feed = requests.get(url, headers=headers_lib)
-            feed_data = json.loads(feed.content.encode('utf-8'))
+            try:
+                feed = requests.get(url, headers=headers_lib, timeout=15)
+            except requests.exceptions.Timeout:
+                log.error(url + " timed out. Aborting.")
+                break
+            
+            try:
+                feed_data = json.loads(feed.content.encode('utf-8'))
 
-            for entry in feed_data['data']['children']:
-                log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
-                log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
-                if (entry['data']['created_utc'] > timestamp_dict[channel][url]):
-                    log.debug("We have a new item! Hooray!")
-                    result_str, timestamp = get_reddit_api(entry['data'])
-                    result_dict[channel].append(result_str)
-            ## This line updates the timestamp for the next go-around ##
-            with lock:
-                log.debug("Lock acquired")
-                log.info("Now setting timestamp in timestamp_dict to be " + str(feed_data['data']['children'][0]['data']['created_utc']) + " for url " + url + " in channel " + channel) 
-                timestamp_dict[channel][url] = feed_data['data']['children'][0]['data']['created_utc']
+                for entry in feed_data['data']['children']:
+                    log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
+                    log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
+                    if (entry['data']['created_utc'] > timestamp_dict[channel][url]):
+                        log.debug("We have a new item! Hooray!")
+                        result_str, timestamp = get_reddit_api(entry['data'])
+                        result_dict[channel].append(result_str)
+                ## This line updates the timestamp for the next go-around ##
+                with lock:
+                    log.debug("Lock acquired")
+                    log.info("Now setting timestamp in timestamp_dict to be " + str(feed_data['data']['children'][0]['data']['created_utc']) + " for url " + url + " in channel " + channel) 
+                    timestamp_dict[channel][url] = feed_data['data']['children'][0]['data']['created_utc']
+            except ValueError:
+                pass
 
     for channel in result_dict:
         log.debug(str(len(result_dict[channel])) + " results in " + channel)
@@ -108,16 +118,6 @@ def process_rss(bot):
                 bot.say(channel, result_dict[channel][x].encode('utf-8'))
     return
 
-def rotator(bot, delay):
-    """Starts up the rotator"""
-    try:
-        t = threading.Thread(target=process_rss, args=(bot,))
-        t.daemon = True
-        t.start()
-        t.join()
-        reactor.callLater(delay, rotator, bot, delay)
-    except Exception:
-        log.error("Rotator error")
 
 def _import_yaml_data(directory=os.curdir):
     try:
