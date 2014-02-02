@@ -14,7 +14,7 @@ def _import_yaml_data(directory=os.curdir):
         settings_path = os.path.join(directory, "modules", "lastfm.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file."
+            bot.info("Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file.")
             return
 
 
@@ -39,7 +39,6 @@ def command_np(bot, user, channel, args):
 
         if worked is True:
             vartuple = (str(lastid_updated).lower(), str(usersplit).lower())
-            print vartuple
             try:
                 c.execute("UPDATE lookup SET lastid=(?) WHERE nick=(?)", vartuple)
             except sqlite3.Error, msg:
@@ -53,7 +52,6 @@ def command_np(bot, user, channel, args):
             return
         else:
             vartuple = (str(usersplit).lower(), str(lastid_updated).lower())
-            print vartuple
             try:
                 c.execute("INSERT INTO lookup VALUES (?, ?)", vartuple)
             except sqlite3.Error, msg:
@@ -68,7 +66,6 @@ def command_np(bot, user, channel, args):
     else:
         c = DB.cursor()
         if len(args.split(" ")[0]) > 0:
-            print args.split(" ")[0]
             result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
         else:
             result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (usersplit.lower(),))
@@ -77,7 +74,6 @@ def command_np(bot, user, channel, args):
         if type(lastid) is None:
             bot.say(usersplit, "Please set your lastfm username: .np add")
             bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
-        print lastid
 
         c.close()
         DB.close()
@@ -127,7 +123,7 @@ def command_compare(bot, user, channel, args):
     me = (usersplit.strip().lower(),)
     lastid = ""
     yourid = ""
-    print argy, me
+
     for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", argy):
         lastid = row[0]
     for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", me):
@@ -150,10 +146,9 @@ def command_compare(bot, user, channel, args):
         tree = ET.fromstring(data)
 
         number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100
-        print number
+
 
         matches = int(tree[0][0][1].attrib['matches'])
-        print matches
         artistList = []
         if matches < 4:
             for i in range(matches):
