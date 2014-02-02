@@ -21,18 +21,19 @@ def command_time(bot, user, channel, args):
             return False
 
     if is_number(args) is True:
-        print LATLNG_URL % args
         latlng_data = json.load(urllib2.urlopen(LATLNG_URL % args))
     else:
         if args[:2] == "in":
             args = args[2:]
-        args = urllib.quote(args)
-        print args
-        print LATLNG_URL % args
-        latlng_data = json.load(urllib2.urlopen(LATLNG_URL % args))
+        latlng_data = json.load(urllib2.urlopen(LATLNG_URL % urllib.quote(args)))
 
-    lat = latlng_data['results'][0]['geometry']['location']['lat']
-    lng = latlng_data['results'][0]['geometry']['location']['lng']
+    try:
+        lat = latlng_data['results'][0]['geometry']['location']['lat']
+        lng = latlng_data['results'][0]['geometry']['location']['lng']
+    except IndexError:
+        bot.say(channel, "I don't know where %s is. Check that it's on this planet and try again." % (args))
+        return
+
     timestamp = time.time()
 
     tz_data = json.load(urllib2.urlopen(TZ_URL % (lat, lng, timestamp)))
@@ -40,7 +41,7 @@ def command_time(bot, user, channel, args):
     raw_offset = tz_data['rawOffset']
     dst_offset = tz_data['dstOffset']
     gmt_offset = (raw_offset + dst_offset) / 3600
-    gmt_offset_str = str(gmt_offset)
+    gmt_offset_str = str(float(gmt_offset))
     if gmt_offset > 0:
         gmt_offset_str = "+" + gmt_offset_str
 
