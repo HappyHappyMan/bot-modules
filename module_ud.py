@@ -49,7 +49,7 @@ def command_ud(bot, user, channel, args):
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
 
-    defText = definition.find(attrs={'class':'definition'}).text
+    defText = definition.find(attrs={'class':'meaning'}).text
     defText = HTMLParser.HTMLParser().unescape(defText)
 
     maxLen = 316
