@@ -15,7 +15,6 @@ import json
 import HTMLParser
 import logging
 import logging.handlers
-import Queue
 
 try:
     from twisted.internet import reactor, task
@@ -27,9 +26,6 @@ except ImportError, error:
 
 log = logging.getLogger('rss') 
 lock = threading.Lock()
-q = Queue.LifoQueue()
-event = threading.Event()
-_sentinel = object()
 
 ### Globals, sigh...###
 global timestamp_dict
@@ -97,8 +93,12 @@ def process_rss(bot):
                 feed_data = json.loads(feed.content.encode('utf-8'))
 
                 for entry in feed_data['data']['children']:
+                    latest_timestamp = 0.0
                     log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
                     log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
+                    if (latest_timestamp < entry['data']['created_utc']):
+                        log.debug("We are updating the timestamp in latest_timestamp to " + str(entry['data']['created_utc']))
+                        latest_timestamp = entry['data']['created_utc']
                     if (entry['data']['created_utc'] > timestamp_dict[channel][url]):
                         log.debug("We have a new item! Hooray!")
                         result_str, timestamp = get_reddit_api(entry['data'])
@@ -107,7 +107,7 @@ def process_rss(bot):
                 with lock:
                     log.debug("Lock acquired")
                     log.info("Now setting timestamp in timestamp_dict to be " + str(feed_data['data']['children'][0]['data']['created_utc']) + " for url " + url + " in channel " + channel) 
-                    timestamp_dict[channel][url] = feed_data['data']['children'][0]['data']['created_utc']
+                    timestamp_dict[channel][url] = latest_timestamp
             except ValueError:
                 pass
 
@@ -135,6 +135,9 @@ def _yaml_dump(settings_file, directory=os.curdir):
     except OSError:
         log.error("Settings file for rss not set up; please create an empty rss.settings file.")
     return
+
+def _restart_rss_feed(bot):
+    pass
 
 def _add_rss_feed(bot, channel, feed_url):
     """Adds RSS feeds to the database"""
@@ -181,6 +184,8 @@ def command_rss(bot, user, channel, args):
         elif (subcommand == "del"):
             feed_num = args[1]
             _del_rss_feed(bot, channel, feed_num)
+        elif (subcommand == "restart"):
+            _restart_rss_feed(bot)
         return
     else:
         bot.say(channel, "You are not authorized to use this command.")
