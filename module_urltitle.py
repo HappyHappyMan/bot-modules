@@ -14,6 +14,7 @@ import logging
 import re
 import json
 import urllib2
+import requests
 import yaml
 import os
 import base64
@@ -77,18 +78,19 @@ def handle_url(bot, user, channel, url, msg):
                 # handler found, abort
                 return _title(bot, channel, title, True)
 
-    bs = getUrl(url).getBS()
+    data = requests.get(url)
+    bs = BeautifulSoup.BeautifulSoup(data.content)
     if not bs:
         return
 
-    title = bs.first('title')
+    title = bs.title.text
     # no title attribute
     if not title:
         return
 
     try:
         # remove trailing spaces, newlines, linefeeds and tabs
-        title = title.string.strip()
+        title = title.strip()
         title = title.replace("\n", " ")
         title = title.replace("\r", " ")
         title = title.replace("\t", " ")
