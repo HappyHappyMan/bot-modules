@@ -2,9 +2,15 @@
 
 
 import BeautifulSoup as bs
-import requests
 import HTMLParser
 import logging
+
+log = logging.getLogger('ud')
+
+try:
+    import requests
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
 

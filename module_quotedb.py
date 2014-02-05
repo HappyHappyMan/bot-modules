@@ -6,15 +6,16 @@ import sys
 import re
 import random
 import linecache
+import logging
 
-
+log = logging.getLogger('quotedb')
 
 def check_params(bot, args, channel):
     """Do some initial checking for the stuff we need for every subcommand"""
 
     expldir = expl_getdir(channel)
     if not expldir:
-        bot.log("No dbdir for channel %s, create %s to enable db." %
+        log.warning("No dbdir for channel %s, create %s to enable db." %
                 (channel, os.path.join(sys.path[0], "expl/qdb", channel)))
         return False
 

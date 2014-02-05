@@ -4,18 +4,23 @@ import psycopg2
 import datetime
 import random
 import urllib
-import urllib2
 import hashlib
 import os
-import yaml
+import logging
 
+log = logging.getLogger('stats')
+
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 def _import_yaml_data(directory=os.curdir):
     try:
         settings_path = os.path.join(directory, "modules", "db.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for database not set up; please setup the postgres db and modify the example settings file."
+            log.warning("Settings file for database not set up; please setup the postgres db and modify the example settings file.")
             return
 
 
@@ -24,7 +29,7 @@ def command_stats(bot, user, channel, args):
     SPECIAL_IDENTS = ["~Mibbit", "~quassel", "~androirc", "~kiwiirc", "Mibbit"]
     SPECIAL_CLOAK = "user/"
 
-    # Disable on channels the logger isn't set up for
+    ## Disable on channels the database isn't set up for
     if channel == "#safefromparadox":
         bot.say(channel, "I'm sorry, this module isn't available on this channel.")
         return
@@ -44,7 +49,6 @@ def command_stats(bot, user, channel, args):
             user_ident = real_ident
         search = ".*" + user_ident + "@.*?"
 
-     ## we are trying this
     bot.say(channel, "Calculating how much time you've wasted...")
     conn = psycopg2.connect(host="localhost", database="quassel", user=user, password=pw)
     cursor = conn.cursor()
@@ -57,7 +61,7 @@ def command_stats(bot, user, channel, args):
         num_lines = int(result[0][0])
         bot.say(channel, "My owner has said %s lines since May 4 2012 00:33:55 EDT!" % (num_lines))
         return
-    ##test db query
+    ## db query
     cursor.execute("SELECT COUNT(*) FROM backlog WHERE senderid IN (SELECT senderid FROM sender WHERE sender ~ %s) AND type=1", (search,))
     result = cursor.fetchall()
     num_lines = int(result[0][0])
@@ -83,13 +87,12 @@ def command_pod(bot, user, channel, args):
 
 
     try: 
+        ## This block evaluates if args was a number
         int(args)
-        ## stuff will happen here
         text = "POD \x02%s/%s\x02 \x02\x0313|\x03\x02 " % (int(args), length) + result[int(args) - 1][0] + " \x02\x0313|\x03\x02 Date posted: \x02%s\x02" % (result[int(args) - 1][1].strftime("%x %X"))
     except ValueError:
-        ## stuff will also happen here, except this time it's more fun
-        if args.strip():
-            ## more things!
+        ## If args wasn't a number, we come down here to where the real fun is
+        if args.strip(): ## if it wasn't blank
             if args.strip() == "recent":
                 text = "Most recent POD \x02\x0313|\x03\x02 " + result[-1][0] + " \x02\x0313|\x03\x02 Date posted: \x02%s\x02" % (result[-1][1].strftime("%x %X"))
             elif args.strip() == "list":
@@ -134,10 +137,9 @@ def _list(db_tuples):
     with open("modules/pods.txt", "a") as hash_file:
         try:
             url = hash_dict[hashy_str]
-            print "It worked!"
         except KeyError:
-            results = urllib2.urlopen("http://ix.io", "f:1=%s" % ret_str)
-            url = results.read().strip()
+            results = requests.post("http://ix.io", "f:1=%s" % ret_str)
+            url = results.content.encode('utf-8').strip()
             hash_dict[hashy_str] = url
             yaml.dump(hash_dict, hash_file)
 

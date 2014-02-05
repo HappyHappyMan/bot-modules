@@ -3,19 +3,23 @@
 
 import os
 import os.path
-import yaml
 import json
 import random
-import requests
+import logging
 
+log = logging.getLogger('kpop')
 
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 def _import_yaml_data(directory=os.curdir):
     try:
         settings_path = os.path.join(directory, "modules", "google.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for Google not set up; please create a Google API account and modify the example settings file."
+            log.warning("Settings file for Google not set up; please create a Google API account and modify the example settings file.")
             return
 
 def command_kpop(bot, user, channel, args):
@@ -27,7 +31,6 @@ def command_kpop(bot, user, channel, args):
     request_url = request_url.encode('utf-8')
 
     result = requests.get(request_url)
-    print result.status_code
 
     result_json = json.loads(result.content.encode('utf-8'))
 

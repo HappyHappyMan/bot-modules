@@ -1,10 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import xml.etree.ElementTree as ET
-import urllib2
 import sqlite3
-import yaml
 import os
+import logging
+
+log = logging.getLogger('lastfm')
+
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 API_URL = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=1"
 
@@ -14,7 +20,7 @@ def _import_yaml_data(directory=os.curdir):
         settings_path = os.path.join(directory, "modules", "lastfm.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            bot.info("Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file.")
+            log.warning("Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file.")
             return
 
 
@@ -42,7 +48,7 @@ def command_np(bot, user, channel, args):
             try:
                 c.execute("UPDATE lookup SET lastid=(?) WHERE nick=(?)", vartuple)
             except sqlite3.Error, msg:
-                print msg
+                log.error(msg)
 
             DB.commit()
             c.close()
@@ -79,9 +85,8 @@ def command_np(bot, user, channel, args):
         DB.close()
 
         call_url = API_URL % ("user.getrecenttracks", str(lastid), settings["lastfm"]["key"])
-        xmlreturn = urllib2.urlopen(call_url)
-        data = xmlreturn.read()
-        xmlreturn.close()
+        xmlreturn = requests.get(call_url)
+        data = xmlreturn.content.encode('utf-8')
         tree = ET.fromstring(data)
 
         try:
@@ -140,9 +145,8 @@ def command_compare(bot, user, channel, args):
     else:
         import math  # Yeah, yeah, whatever
         call_url = COMPARE_URL % (lastid, yourid, settings["lastfm"]["key"])
-        xmlreturn = urllib2.urlopen(call_url)
-        data = xmlreturn.read()
-        xmlreturn.close()
+        xmlreturn = requests.get(call_url)
+        data = xmlreturn.content.encode('utf-8')
         tree = ET.fromstring(data)
 
         number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100
@@ -189,9 +193,8 @@ def command_charts(bot, user, channel, args):
     DB.close()
 
     call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=5&period=7day" % ("user.gettopartists", str(lastid), settings["lastfm"]["key"])
-    xmlreturn = urllib2.urlopen(call_url)
-    data = xmlreturn.read()
-    xmlreturn.close()
+    xmlreturn = requests.get(call_url)
+    data = xmlreturn.content.encode('utf-8')
     tree = ET.fromstring(data)
 
     artistList = []

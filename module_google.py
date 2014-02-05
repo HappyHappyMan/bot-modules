@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import json
-import urllib2
 import urllib
 import HTMLParser
 import os
-import yaml
+import logging
+
+log = logging.getLogger('google')
+
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&q=%s"
 SHORTENER_URL = "http://v.gd/create.php?format=json&url=%s"
@@ -17,21 +23,21 @@ def _import_yaml_data(directory=os.curdir):
         settings_path = os.path.join(directory, "modules", "google.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for Google not set up; please create a Google API account and modify the example settings file."
+            log.warning("Settings file for Google not set up; please create a Google API account and modify the example settings file.")
             return
 
 
 def _googling(args):
     settings = _import_yaml_data()
     args = args.decode('utf-8')
-    json1 = json.load(urllib2.urlopen(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8', 'ignore')))))
+    request = requests.get(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8', 'ignore'))))
+    json1 = json.loads(request.content.encode('utf-8'))
     result = {}
     result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
     result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
     result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
-    shortReq = urllib2.urlopen(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
-    shortData = json.load(shortReq)
-    print shortData.keys()
+    shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
+    shortData = json.loads(shortReq.content.encode('utf-8'))
     result["shortURL"] = shortData['shorturl'].encode('utf-8')
 
     return result

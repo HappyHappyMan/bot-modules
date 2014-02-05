@@ -16,19 +16,20 @@ import HTMLParser
 import logging
 import logging.handlers
 
+log = logging.getLogger('rss') 
+
 try:
     from twisted.internet import reactor, task
     import yaml
     init_ok = True
 except ImportError, error:
-    print("Error starting rss module: %s" % error)
+    log.warning("Error starting rss module: %s" % error)
     init_ok = False
 
-log = logging.getLogger('rss') 
-lock = threading.Lock()
 
 ### Globals, sigh...###
-global timestamp_dict
+lock = threading.Lock()
+timestamp_dict = {}
 
 def event_signedon(bot):
     """Starts rotator, triggered when bot signs on to network"""
@@ -49,8 +50,6 @@ def event_signedon(bot):
     l.start(delay)
 
 def get_reddit_api(data):
-
-    
     timestamp = data['created_utc']
     title = HTMLParser.HTMLParser().unescape(data['title'])
     author = data['author']
@@ -172,7 +171,7 @@ def _del_rss_feed(bot, channel, feed_num):
 
 
 def command_rss(bot, user, channel, args):
-    """Usable only by bot mods, rss feed management"""
+    """Usable only by bot mods, json feed management"""
     args = args.split()
     subcommand = args[0]
     if (isAdmin(user)):

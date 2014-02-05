@@ -2,18 +2,23 @@
 Module to emulate Rizon :tw functionality
 """
 import json
-import urllib2
-import yaml
 import os
 import base64
+import logging
 
+log = logging.getLogger('tw')
+
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 def _import_yaml_data(directory=os.curdir):
     try:
         settings_path = os.path.join(directory, "modules", "twitter.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file."
+            log.warning("Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file.")
             return
 
 
@@ -31,38 +36,37 @@ def _handle_tweet(username):
     headers_lib['Authorization'] = "Basic " + base64_key
     headers_lib['Content-Type'] = "application/x-www-form-urlencoded;charset=UTF-8"
 
-    auth_request = urllib2.Request(auth_url, "grant_type=client_credentials", headers_lib)
-    auth_return = urllib2.urlopen(auth_request)
-    auth_dict = json.load(auth_return)
+    auth_return = requests.post(auth_url, "grant_type=client_credentials", headers=headers_lib)
+    auth_dict = json.loads(auth_return.content.encode('utf-8'))
 
     if auth_dict['token_type'] != "bearer":
+        log.error("token_type was not bearer, something went wrong. look into it.")
         return
 
     #matches for unique tweet id string
     get_url = tweet_url % username
     get_token = "Bearer " + auth_dict['access_token']
-    get_request = urllib2.Request(get_url)
-    get_request.add_header("Authorization", get_token)
-    twitapi = urllib2.urlopen(get_request)
+    token_headers_lib = {}
+    token_headers_lib["Authorization"] = get_token
+    twitapi = requests.get(get_url, headers=token_headers_lib)
 
     #loads into dict
-    json1 = json.load(twitapi)
+    json1 = json.loads(twitapi.content.encode('utf-8'))
 
     #reads dict
     ##You can modify the fields below or add any fields you want to the returned string
     try:
-        if json1['error']:
-            tweet = "User not found"
-    except TypeError:
         id_num = json1[0]['id']
         text = json1[0]['text']
         user = json1[0]['user']['screen_name']
         name = json1[0]['user']['name']
         tweet = "Most recent tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s \x02\x0310|\x03\x02 https://twitter.com/%s/status/%s" % (name, user, text, user, id_num)
+    except IndexError:
+        tweet = "User not found."
     return tweet
 
 
 def command_tw(bot, user, channel, args):
-    """ All we're doing here, is taking .tw and running it out such that we can do things properly with it
+    """ Gets the most recent tweet tweeted by a twitter tweeter
     """
     bot.say(channel, _handle_tweet(args).encode('utf-8'))

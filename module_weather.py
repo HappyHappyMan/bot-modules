@@ -1,13 +1,18 @@
 # # -*- coding: utf-8 -*-
 
-
-import urllib2
 import json
-import yaml
 import urllib
 import os
 import sqlite3
 import datetime
+import logging
+
+log = logging.getLogger('weather')
+
+try:
+    import requests, yaml  
+except ImportError as e:
+    log.error("Error importing modules: %s" % e.strerror)
 
 
 def _import_yaml_data(directory=os.curdir):
@@ -15,12 +20,13 @@ def _import_yaml_data(directory=os.curdir):
         settings_path = os.path.join(directory, "modules", "weather.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            print "Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file."
+            log.warning("Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file.")
             return
 
 def _get_latlng(city):
     city = urllib.quote(city)
-    latlng_data = json.load(urllib2.urlopen("https://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % city))
+    latlng = requests.get("https://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % city)
+    latlng_data = json.loads(latlng.content.encode('utf-8'))
     lat = latlng_data['results'][0]['geometry']['location']['lat']
     lng = latlng_data['results'][0]['geometry']['location']['lng']
     name = latlng_data['results'][0]['formatted_address']
@@ -49,7 +55,7 @@ def _set_saved_data(nick, location, conn, temp_type, forecast_type):
     testresult = c.execute("SELECT temp_type FROM weather WHERE nick LIKE ?", (nick,))
 
     try:
-        db_temp_type = testresult.fetchone()[0]
+        testresult.fetchone()[0]
         worked = True
     except TypeError:
         worked = False
@@ -116,7 +122,6 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
 def _parse_args(args):
     """Parses an already-split args list and returns a list with location, unit type, and forecast type, in that order."""
     if len(args) > 1: # If there are any optional args at all
-        print "there are optional args"
         if args[1] in ["us", "si", "uk", "ca", "both"]: # If the first arg is for units, set up units
             if args[1] == "us":
                 args[1] = 0
@@ -141,12 +146,6 @@ def _parse_args(args):
     else: # If no options were specified, set default units and forecast
         args.append(0)
         args.append("summary")
-
-    ## DEBUG ##
-    print args[0]
-    print args[1]
-    print args[2]
-    ## END DEBUG ##
 
     return args
 
@@ -188,12 +187,9 @@ def command_weather(bot, user, channel, args):
 
     if args:
         args = args.split(":")
-        print args
         latlng = _get_latlng(args[0])
         units = ""
         args = _parse_args(args)
-
-        print args[1]
 
         if args[1] == 1:
             units = "?units=si"
@@ -208,16 +204,12 @@ def command_weather(bot, user, channel, args):
             units = "?units=us"
             measure_type = 4
 
-        print latlng
-        print type(latlng)
         url = API_URL % (settings["weather"]["key"], latlng[0]) + units
-        print url
 
-        data = urllib2.urlopen(url)
+        data = requests.get(url)
     else:
         nick = user.split('!', 1)[0]
         db_data, success = _get_saved_data(nick.lower(), settings['weather']['db'])
-        print success
         if success is True:
             units = ""
             latlng = _get_latlng(db_data[1])
@@ -230,14 +222,12 @@ def command_weather(bot, user, channel, args):
                 units = "?units=uk"
             elif measure_type == 4:
                 units = "?units=us"
-            data = urllib2.urlopen(API_URL % (settings["weather"]["key"], latlng[0]) + units)
+            data = requests.get(API_URL % (settings["weather"]["key"], latlng[0]) + units)
         else:
             bot.say(channel, "You're not in the database! Set a location with .wadd.")
             return
 
-    weather_data = json.load(data)
-
-    print weather_data["currently"].keys()
+    weather_data = json.loads(data.content.encode('utf-8'))
 
     weather_string = _parse_weather_output(weather_data, latlng[1], measure_type)
 
@@ -285,9 +275,9 @@ def command_forecast(bot, user, channel, args):
             bot.say(channel, "You're not in the database! Set a location with .wadd.")
             return
 
-    data = urllib2.urlopen(API_URL % (settings["weather"]["key"], latlng[0]) + units)
+    data = requests.get(API_URL % (settings["weather"]["key"], latlng[0]) + units)
 
-    weather_data = json.load(data)
+    weather_data = json.loads(data.content.encode('utf-8'))
 
     city_name = latlng[1].encode('utf-8')
 
@@ -310,7 +300,6 @@ def command_wadd(bot, user, channel, args):
     settings = _import_yaml_data()
 
     args = args.split(":")
-    print args
     nick = user.split('!', 1)[0]
 
     args = _parse_args(args)
