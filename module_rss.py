@@ -92,8 +92,8 @@ def process_rss(bot):
             try:
                 feed_data = json.loads(feed.content.encode('utf-8'))
 
+                latest_timestamp = 0.0
                 for entry in feed_data['data']['children']:
-                    latest_timestamp = 0.0
                     log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
                     log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
                     if (latest_timestamp < entry['data']['created_utc']):
@@ -106,7 +106,7 @@ def process_rss(bot):
                 ## This line updates the timestamp for the next go-around ##
                 with lock:
                     log.debug("Lock acquired")
-                    log.info("Now setting timestamp in timestamp_dict to be " + str(feed_data['data']['children'][0]['data']['created_utc']) + " for url " + url + " in channel " + channel) 
+                    log.info("Now setting timestamp in timestamp_dict to be " + str(latest_timestamp) + " for url " + url + " in channel " + channel) 
                     timestamp_dict[channel][url] = latest_timestamp
             except ValueError:
                 pass
