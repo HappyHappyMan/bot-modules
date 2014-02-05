@@ -8,7 +8,6 @@ nobody needs RSS feeds of anything else.
 """
 
 import threading
-import requests
 import time
 import os
 import json
@@ -19,11 +18,12 @@ import logging.handlers
 log = logging.getLogger('rss') 
 
 try:
-    from twisted.internet import reactor, task
+    import requests
+    from twisted.internet import task
     import yaml
     init_ok = True
-except ImportError, error:
-    log.warning("Error starting rss module: %s" % error)
+except ImportError as e:
+    log.warning("Error starting rss module: %s" % e.strerror)
     init_ok = False
 
 

@@ -75,11 +75,11 @@ def command_np(bot, user, channel, args):
             result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
         else:
             result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (usersplit.lower(),))
-        lastid = result.fetchone()[0]
-
-        if type(lastid) is None:
-            bot.say(usersplit, "Please set your lastfm username: .np add")
+        try:
+            lastid = result.fetchone()[0]
+        except TypeError:
             bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
+            return
 
         c.close()
         DB.close()
