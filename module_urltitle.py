@@ -79,11 +79,13 @@ def handle_url(bot, user, channel, url, msg):
                 return _title(bot, channel, title, True)
 
     data = requests.get(url)
-    bs = BeautifulSoup.BeautifulSoup(data.content)
-    if not bs:
+    try:
+        bs = BeautifulSoup.BeautifulSoup(data.content.encode('utf-8'))
+    except UnicodeEncodeError:
         return
-
+   
     title = bs.title.text
+
     # no title attribute
     if not title:
         return
