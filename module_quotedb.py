@@ -107,3 +107,33 @@ def command_quote(bot, user, channel, args):
         return_line = linecache.getline(os.path.join(expldir, "quotes.txt"), (int(argy[0]))).strip("\n")
         bot.say(channel, "Quote \x02%s/%s\x02 \x02\x036|\x03\x02 " % (argy[0], totlines) + return_line)
         return
+
+def command_qlist(bot, user, channel, args):
+    """
+    You say this in a channel, it will pastebin that channel's quotes list. ezpz.
+    """
+    import requests
+    import urllib
+    import datetime
+
+    try:
+        expldir = os.path.join(sys.path[0], "expl/qdb", channel)
+    except TypeError:
+        return
+
+    time = datetime.datetime.now().time()
+    date = datetime.datetime.now().date()
+
+    td = datetime.datetime.combine(date, time).strftime("%B %d, %Y %X")
+
+    totlines = file_len(os.path.join(expldir, "quotes.txt"))
+
+    lines = "===================================Quote list for channel " + channel + " as of " + td + " Eastern===================================\n"
+
+    for x in range(1, totlines+1):
+        lines = lines + "Quote " + str(x) + ': ' + urllib.quote(linecache.getline(os.path.join(expldir, "quotes.txt"), x))
+
+    urlRequest = requests.post("http://sprunge.us", "sprunge=%s" % lines)
+    url = urlRequest.content.encode('utf-8')
+
+    bot.say(channel, url.strip())
