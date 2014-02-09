@@ -29,22 +29,26 @@ def command_np(bot, user, channel, args):
 
     settings = _import_yaml_data()
 
+    ## All the saved users are in a sqlite3 database
     DB = sqlite3.connect(settings['lastfm']['database'])
-    usersplit = user.split('!', 1)[0]
+    nick = bot.factory.getNick(user)
 
-    if args.split(" ")[0] == "add":
+    if args.split(" ")[0] == "add": # If the user wants to add or update their name in the db
         lastid_updated = args.split(" ")[1].strip().lower()
 
         c = DB.cursor()
-        testresult = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (usersplit.lower(),))
+        testresult = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
+
+        ## This tests whether the user already has an entry in the database, since we
+        ## need to know whether to execute an UPDATE or INSERT query.
         try:
             testresult.fetchone()[0]
             worked = True
         except TypeError:
             worked = False
 
-        if worked is True:
-            vartuple = (str(lastid_updated).lower(), str(usersplit).lower())
+        if worked is True: # The user wants to update their lastfm entry
+            vartuple = (str(lastid_updated).lower(), str(nick).lower())
             try:
                 c.execute("UPDATE lookup SET lastid=(?) WHERE nick=(?)", vartuple)
             except sqlite3.Error, msg:
@@ -54,10 +58,10 @@ def command_np(bot, user, channel, args):
             c.close()
             DB.close()
 
-            bot.say(usersplit, "Last.fm username updated!")
+            bot.say(nick, "Last.fm username updated!")
             return
-        else:
-            vartuple = (str(usersplit).lower(), str(lastid_updated).lower())
+        else: # The user is adding their lastfm entry for the first time
+            vartuple = (str(nick).lower(), str(lastid_updated).lower())
             try:
                 c.execute("INSERT INTO lookup VALUES (?, ?)", vartuple)
             except sqlite3.Error, msg:
@@ -67,32 +71,40 @@ def command_np(bot, user, channel, args):
             c.close()
             DB.close()
 
-            bot.say(usersplit, "Last.fm username set!")
+            bot.say(nick, "Last.fm username set!")
             return
-    else:
+    else: # The user wants to retrieve now playing information
         c = DB.cursor()
-        if len(args.split(" ")[0]) > 0:
+        if len(args.split(" ")[0]) > 0: # If they want somebody else's
             result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
-        else:
-            result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (usersplit.lower(),))
+        else: # If they want their own
+            result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
+        
+        ## This is wrapped in a try/except because sometimes people don't have entries in the db.
         try:
             lastid = result.fetchone()[0]
-        except TypeError:
-            if args.split(" ")[0].strip() == "":
+        except TypeError: # They execute an invalid query
+            if args.split(" ")[0].strip() == "": # If they were asking for themselves
                 bot.say(channel, "You don't exist in my db! You should really look into that.")
                 return
-            else:
+            else: # Or for somebody else
                 bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
             return
 
         c.close()
         DB.close()
 
+        ## Whoof. After that guantlet, we can be reasonably sure that we have valid input
+        ## for the API call. Time to go get it.
         call_url = API_URL % ("user.getrecenttracks", str(lastid), settings["lastfm"]["key"])
         xmlreturn = requests.get(call_url)
         data = xmlreturn.content.encode('utf-8')
         tree = ET.fromstring(data)
 
+        ## I do wish the etree library formatted everything into a dict like the json
+        ## library does, then maybe this wouldn't seem like such a mess of magic
+        ## integers. Nevertheless, this works, and is entirely motivated by the XML
+        ## lastfm returns.
         try:
             artist = tree[0][0][0][0].text
         except IndexError:
@@ -109,6 +121,8 @@ def command_np(bot, user, channel, args):
         if artist is None:
             artist = ""
 
+        ## This will account for the nowplaying attribute lastfm returns, and format
+        ## the output string appropriately. 
         if len(nowplaying) > 0:
             bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s/now' %
                     (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
@@ -125,26 +139,27 @@ def command_compare(bot, user, channel, args):
 
     DB = sqlite3.connect(settings["lastfm"]["database"])
     COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
-    usersplit = user.split("!", 1)[0]
+    nick = bot.factory.getNick(user)
 
     c = DB.cursor()
-    argy = (args.split(" ")[0].strip().lower(),)
-    me = (usersplit.strip().lower(),)
+    arg = (args.split(" ")[0].strip().lower(),) # Nick you asked to compare with
+    me = (nick.strip().lower(),) # Module caller's nick
     lastid = ""
     yourid = ""
 
-    for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", argy):
+    for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", arg):
         lastid = row[0]
     for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", me):
         yourid = row[0]
     c.close()
     DB.close()
 
+    ## Handles the two possible ways a user couldn't exist to be compared with.
     if lastid == "":
         bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
         return
     if yourid == "":
-        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % usersplit)
+        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % nick)
         return
     else:
         import math  # Yeah, yeah, whatever
@@ -153,18 +168,25 @@ def command_compare(bot, user, channel, args):
         data = xmlreturn.content.encode('utf-8')
         tree = ET.fromstring(data)
 
-        number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100
+        ## A particularly innovative way to round the float they send back to two
+        ## decimal places. Nobody tell past me about math.round().
+        number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100 
 
 
-        matches = int(tree[0][0][1].attrib['matches'])
+        matches = int(tree[0][0][1].attrib['matches']) # extracts the common artists
         artistList = []
+
+        ## Puts the top 4 common artists into a list.
         if matches < 4:
             for i in range(matches):
                 artistList.append(tree[0][0][1][i][0].text)
         else:
             for i in range(4):
                 artistList.append(tree[0][0][1][i][0].text)
+        
         simString = "Similar artists include: "
+        ## Formats the common artist list slightly better than a map() would, by
+        ## being smart enough to not add a comma to the last entry.
         for r in range(len(artistList)):
             if (r + 1) == len(artistList):
                 simString = simString + artistList[r]
@@ -173,25 +195,28 @@ def command_compare(bot, user, channel, args):
 
         bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users \x02%s\x02 and \x02%s\x02 have similarity %s%% \x034\x02|\x02\x03 %s" % 
             (lastid.encode('utf-8'), yourid.encode('utf-8'), number, simString.encode('utf-8')))
+        return
 
 
 def command_charts(bot, user, channel, args):
     settings = _import_yaml_data()
 
     DB = sqlite3.connect(settings["lastfm"]["database"])
-    usersplit = user.split("!", 1)[0]
+    nick = bot.factory.getNick(user)
     c = DB.cursor()
 
+    ## Checks whether a user wants their charts or somebody else's by doing a len()
+    ## check on " "-tokenized args list.
     if len(args.split(" ")[0]) > 0:
-        print args.split(" ")[0]
         result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
     else:
-        result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (usersplit.lower(),))
+        result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
 
     lastid = result.fetchone()[0]
 
     if type(lastid) is None:
         bot.say(channel, "That user doesn't exist in my db! They should look into that.")
+        return
 
     c.close()
     DB.close()
@@ -209,11 +234,14 @@ def command_charts(bot, user, channel, args):
     for i in range(numArtists):
         artistList.append((tree[0][i][0].text, tree[0][i][1].text))
 
-    retString = ""
+    simString = ""
+    ## Formats the common artist list slightly better than a map() would, by
+    ## being smart enough to not add a comma to the last entry.
     for r in range(len(artistList)):
         if (r + 1) == len(artistList):
-            retString = retString + artistList[r][0] + " " + "(" + artistList[r][1] + ")"
+            simString = simString + artistList[r][0] + " " + "(" + artistList[r][1] + ")"
         else:
-            retString = retString + artistList[r][0] + " " + "(" + artistList[r][1] + "), "
+            simString = simString + artistList[r][0] + " " + "(" + artistList[r][1] + "), "
 
-    bot.say(channel, "Last.fm weekly charts for \x02%s\x02 \x034\x02|\x02\x03 %s" % (lastid.encode('utf-8'), retString.encode('utf-8')))
+    bot.say(channel, "Last.fm weekly charts for \x02%s\x02 \x034\x02|\x02\x03 %s" % (lastid.encode('utf-8'), simString.encode('utf-8')))
+    return

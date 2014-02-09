@@ -48,12 +48,15 @@ def _get_saved_data(nick, conn):
         return userdata, False
 
 def _set_saved_data(nick, location, conn, temp_type, forecast_type):
-    """Have them specify a temp_type no matter what in the bot code, it's too much hassle trying to predict it when updating."""
+    """
+    Helper function to write updated data to the database.
+    """
     DB = sqlite3.connect(conn)
     c = DB.cursor()
 
     testresult = c.execute("SELECT temp_type FROM weather WHERE nick LIKE ?", (nick,))
 
+    ## Test whether user already exists in the database
     try:
         testresult.fetchone()[0]
         worked = True
@@ -61,6 +64,7 @@ def _set_saved_data(nick, location, conn, temp_type, forecast_type):
         worked = False
 
     if worked is True:
+        ## Execute an UPDATE query
         vartuple = (temp_type, nick, location, forecast_type)
 
         try:
@@ -74,6 +78,7 @@ def _set_saved_data(nick, location, conn, temp_type, forecast_type):
 
         return
     else:
+        ## Execute an INSERT query
         vartuple = (temp_type, nick, location, forecast_type)
 
         try:
@@ -99,9 +104,12 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
             icon = icons[weather_data['daily'][x]['icon']]
         except KeyError:
             icon = ""
-        date = datetime.datetime.fromtimestamp(int(weather_data['daily']['data'][x]['time'])).strftime("%Y-%m-%d") # to be changed
+
+        date = datetime.datetime.fromtimestamp(int(weather_data['daily']['data'][x]['time'])).strftime("%Y-%m-%d")
         summary = weather_data['daily']['data'][x]['summary']
+
         if measure_type == 4:
+            ## Build a special string that has both measurement systems. 
             minTemp_f = str(weather_data['daily']['data'][x]['temperatureMin'])
             maxTemp_f = str(weather_data['daily']['data'][x]['temperatureMax'])
             minTemp_c = str(round((weather_data['daily']['data'][x]['temperatureMin'] - 32) * 5/9, 2))
@@ -111,6 +119,7 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
             forecast_list.append(buildstr)
 
         else:
+            ## Build a regular string that has only one measurement system.
             minTemp = str(weather_data['daily']['data'][x]['temperatureMin'])
             maxTemp = str(weather_data['daily']['data'][x]['temperatureMax'])
 
@@ -160,6 +169,7 @@ def _parse_weather_output(weather_data, city_name, measure_type):
     precipProb = str(weather_data['currently']['precipProbability'] * 100) + "%"
 
     if measure_type == 4:
+        ## Build a string that has both measurement systems.
         temp_f = str(round(weather_data['currently']['temperature'], 2))
         temp_c = str(round((weather_data['currently']['temperature'] - 32) * 5/9, 2))
         feelslike_f = str(round(weather_data['currently']['apparentTemperature'], 2))
@@ -169,6 +179,7 @@ def _parse_weather_output(weather_data, city_name, measure_type):
 
         weather_string = "Weather for \x02%s\x02 \x02\x033|\x03\x02 %s, %s%s (%s%s) feels like %s%s (%s%s), %s humidity, wind %s %s (%s %s), %s chance of precipitation" % (city_name, summary, temp_f, temp_suffix[0], temp_c, temp_suffix[1], feelslike_f, temp_suffix[0], feelslike_c, temp_suffix[1], humidity, windspeed_mph, wind_suffix[0], windspeed_ms, wind_suffix[1], precipProb)
     else:
+        ## build a regular string that has only one weather system.
         temperature = str(round(weather_data['currently']['temperature'], 2))
         feels_like = str(round(weather_data['currently']['apparentTemperature'], 2))
         wind_speed = str(round(weather_data['currently']['windSpeed'], 2))
@@ -191,6 +202,7 @@ def command_weather(bot, user, channel, args):
         units = ""
         args = _parse_args(args)
 
+        ## set the units type for the API call
         if args[1] == 1:
             units = "?units=si"
             measure_type = 1
@@ -208,12 +220,13 @@ def command_weather(bot, user, channel, args):
 
         data = requests.get(url)
     else:
-        nick = user.split('!', 1)[0]
+        nick = bot.factory.getNick(user)
         db_data, success = _get_saved_data(nick.lower(), settings['weather']['db'])
         if success is True:
             units = ""
             latlng = _get_latlng(db_data[1])
             measure_type = db_data[0]
+            ## set the units type for the API call
             if measure_type == 1:
                 units = "?units=si"
             elif measure_type == 2:
