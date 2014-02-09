@@ -25,7 +25,7 @@ def _import_yaml_data(directory=os.curdir):
 
 
 def command_np(bot, user, channel, args):
-    """Usage: .np without arguments will return your now playing. .np add "lastfm username" (no quotes) to add your name to the db."""
+    """Lastfm module! Usage: .np without arguments will return your now playing. .np add "lastfm username" (no quotes) to add your name to the db."""
 
     settings = _import_yaml_data()
 
@@ -78,7 +78,11 @@ def command_np(bot, user, channel, args):
         try:
             lastid = result.fetchone()[0]
         except TypeError:
-            bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
+            if args.split(" ")[0].strip() == "":
+                bot.say(channel, "You don't exist in my db! You should really look into that.")
+                return
+            else:
+                bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
             return
 
         c.close()
