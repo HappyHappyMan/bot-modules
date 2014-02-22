@@ -2,7 +2,11 @@
 
 import random
 import BeautifulSoup
-import urllib2
+import requests
+import json
+import logging
+
+log = logging.getLogger('misc')
 
 def command_roll(bot, user, channel, args):
     """rolls dice. Usage: .roll xdy where x is the number of dice and y is the number of sides on each die"""
@@ -33,12 +37,34 @@ def command_roll(bot, user, channel, args):
         bot.say(channel, nick + ": You rolled a " + ', a '.join(map(str, arr[:-1])) + " and a " + str(arr[-1]) + " for a total of " + str(sum(arr)))
     return
 
+def command_changelog(bot, user, channel, args):
+    """Changelog!"""
+    log.debug(args)
+    log.debug(type(args))
+    try:
+        args = int(args) - 1
+        log.debug("We have found an int! It is " + str(args))
+    except ValueError:
+        log.debug("There are no args!")
+        args = 0
+
+    r = requests.get("https://api.github.com/repos/SriRamanujam/bot-modules/commits")
+    j = json.loads(r.content.encode('utf-8'))
+
+
+    if args > 29:
+        args = 0
+
+    message = j[args]['commit']['message'].encode("utf-8")
+    bot.say(channel, "Changelog %s: %s" % (str(args + 1), message))
+
+
 def command_isup(bot, user, channel, args):
     """Give it a url, it will tell you if it's up or not."""
     nick = user.split("!", 1)[0]
     args = args.split(" ",)[0]
-    isup = urllib2.urlopen("http://isup.me/%s" % args)
-    soup = BeautifulSoup.BeautifulSoup(isup)
+    isup = requests.get("http://isup.me/%s" % args)
+    soup = BeautifulSoup.BeautifulSoup(isup.content.encode('utf-8'))
 
     if user == channel:
         channel = nick
@@ -52,8 +78,8 @@ def command_isup(bot, user, channel, args):
 def command_btc(bot, user, channel, args):
     """Give it an abbreviation for a currency, like usd or jpy, and it will tell you how much of that currency one bitcoin is worth. Defaults to usd."""
     import json
-    data = urllib2.urlopen("https://coinbase.com/api/v1/currencies/exchange_rates")
-    data = json.load(data)
+    data = requests.get("https://coinbase.com/api/v1/currencies/exchange_rates")
+    data = json.loads(data.content.encode('utf-8'))
 
     try:
         if args:
