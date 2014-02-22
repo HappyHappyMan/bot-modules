@@ -16,23 +16,14 @@ UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
 
 def command_ud(bot, user, channel, args):
     """.ud word def#. ie, to get the second definition for the word Google, you'd type .ud Google 2. Defaults to the first definition, if no number is given."""
-    queryWord = args.split(" ")[0]
+    queryWord = args.split(":")[0].replace(" ", "+")
 
     try:
-        defNum = int(args.split(" ")[-1]) - 1
-        numGiven = True
+        defNum = int(args.split(":")[1]) - 1
     except ValueError:
-        numGiven = False
         defNum = 0
-
-    queryWord = ""
-    ## Formatting args for passing to UD. 
-    if numGiven is True:
-        for word in args.split(" ")[:-1]:
-            queryWord = queryWord + word + "+"
-    if numGiven is False:
-        for word in args.split(" ")[:]:
-            queryWord = queryWord + word + "+"
+    except IndexError:
+        defNum = 0
 
     urlobj = requests.get(UD_URL % queryWord)
 
