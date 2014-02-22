@@ -17,6 +17,7 @@ result_dict:    dict(str -> list(str))
 
 import threading
 import time
+import calendar
 import os
 import json
 import HTMLParser
@@ -42,19 +43,38 @@ except ImportError as e:
 ### Globals, sigh...###
 lock = threading.Lock()
 timestamp_dict = {}
+client = None
 
 def event_signedon(bot):
     """Starts rotator, triggered when bot signs on to network"""
 
+    global timestamp_dict
+    global client
     settings = _import_yaml_data()
     ## This has less accuracy than converting datetime() objects, but since
     ## Reddit doesn't deal with timestamps that accurate, we can get away with
     ## only importing one library.
-    current_time = time.mktime(time.gmtime(time.time()))
-
-    global timestamp_dict
+    current_time = calendar.timegm(time.gmtime())
+    
 
     timestamp_dict = {}
+
+    client = requests.session()
+    headers = {'User-Agent':"Lazybot/Claire by Happy_Man"}
+    username = settings['reddit']['username']
+    password = settings['reddit']['password']
+    dataDict = {'user':username, 'passwd':password, 'api_type':'json'}
+
+    client.headers = headers
+    
+    auth = client.post('https://ssl.reddit.com/api/login', data=dataDict)
+    try:
+        authJson = json.loads(auth.content)
+        client.headers['X-Modhash'] = authJson['json']['data']['modhash']
+    except KeyError:
+        log.error("Reddit login unsuccessful, stopping rotator. Please check manually.")
+        return
+
 
     ## settings['channels'].keys() is every channel we have json links for, ie,
     ## every channel that has requested to have a new posts feed. We initialize 
@@ -70,36 +90,43 @@ def event_signedon(bot):
     l = task.LoopingCall(process_rss, bot) 
     l.start(delay)
 
-def get_reddit_api(data):
+def get_reddit_api(data, kind):
     """Extracts relevant strings from data, and formats for output. Returns formatted
     string.
     """
-    timestamp = data['created_utc']
-    title = HTMLParser.HTMLParser().unescape(data['title'])
-    author = data['author']
-    subreddit = data['subreddit']
-    short = "http://redd.it/" + data['name'][3:] # This skips the t3_ part of the name, and gets us only the ID for the shortlink
-    link = "\x037\x02|\x02\x03 " + short
-    over_18 = data['over_18']
-    result = "\x02r/%s/new\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s" % (subreddit, title, author, link)
-    if over_18 is True:
-        result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
-    return result, timestamp
+    if kind == "t1":
+        body = data['body']
+        author = data['author']
+        post_link = "http://redd.it/" + data['link_id'][3:]
+        result = "New comment by \x02%s\x02 \x037\x02|\x02\x03 %s \x037\x02|\x02\x03 %s" % (author, body, post_link)
+    else:
+        timestamp = data['created_utc']
+        title = HTMLParser.HTMLParser().unescape(data['title'])
+        author = data['author']
+        subreddit = data['subreddit']
+        short = "http://redd.it/" + data['name'][3:] # This skips the t3_ part of the name, and gets us only the ID for the shortlink
+        link = "\x037\x02|\x02\x03 " + short
+        over_18 = data['over_18']
+        result = "\x02r/%s/new\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s" % (subreddit, title, author, link)
+        if over_18 is True:
+            result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
+    return result
 
 def process_rss(bot):
     log.debug("RSS processing started")
 
     global timestamp_dict
+    global client
 
     ## Initialize dicts and headers for later on. 
     settings = _import_yaml_data()
     chans = settings['channels']
     result_dict = {}
-    headers_lib = {}
-    headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man" # Yes, this could have been line. I wanted to be clear.
     
     for channel in chans.keys():
         result_dict[channel] = []
+
+        log.debug(result_dict)
 
         ## This loop handles initializing a newly added feed's timestamp, by copying
         ## what's done in event_signedon(). 
@@ -107,21 +134,29 @@ def process_rss(bot):
             try:
                 timestamp_dict[channel][url]
             except KeyError:
-                timestamp_dict[channel][url] = time.mktime(time.gmtime(time.time()))
+                timestamp_dict[channel][url] = calendar.timegm(time.gmtime())
 
-            
+            log.debug(timestamp_dict)
             ## For some reason, reddit is sometimes really bad about returning json 
             ## on time. This try block attempts to account for that, because otherwise
             ## the thread hard-crashes and stops looping. Remember to always put a break
             ## in every except, otherwise execution will continue and json.loads() will
             ## try to extract json from nothing!
             try:
-                feed = requests.get(url, headers=headers_lib, timeout=15)
+                feed = client.get(url, timeout=15)
             except requests.exceptions.Timeout:
                 log.error(url + " timed out. Aborting.")
                 break
-            except requests.exceptions.ConnectionError as e:
-                log.error(url + " has an unspecified Connection Error: " + e.strerror)
+            except requests.exceptions.ConnectionError:
+                log.error(url + " was retried too many times. Aborting.")
+                break
+
+            ## In keeping with the "reddit is bad at providing an API" thing, non-200
+            ## status codes don't result in an error, but all the same, it messes with
+            ## assumptions made by the processing block below. So we check for 200 here,
+            ## and abort if anything other than a 200 comes through. 
+            if (feed.status_code != 200):
+                log.error(url + " returned " + str(feed.status_code) + " error. Aborting.")
                 break
             
             ## This try may not need to be here, but it's there just in case something 
@@ -141,29 +176,42 @@ def process_rss(bot):
                 ## that latest_timestamp is actually the latest timestamp, by manually comparing
                 ## every single one. Make no assumptions about the validity of your data!
                 for entry in feed_data['data']['children']:
-                    log.debug("latest_timestamp timestamp is " + str(timestamp_dict[channel][url]))
+                    log.debug("timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
+                    log.debug("latest_timestamp timestamp is " + str(latest_timestamp))
                     log.debug("Entry timestamp is " + str(entry['data']['created_utc']))
 
                     if (latest_timestamp < entry['data']['created_utc']):
                         log.debug("We are updating the timestamp in latest_timestamp to " + str(entry['data']['created_utc']))
                         latest_timestamp = entry['data']['created_utc']
+                        log.debug("latest_timestamp is now " + str(latest_timestamp))
+
+
                 ## The second for loop actually handles checking for new items. We 
                 ## compare against the last iteration's timestamp, saved in the dict,
                 ## and parse any new entries with get_reddit_api(), which formats the
                 ## output string (result_str) and returns it. We then take that string 
                 ## and put it into result_dict[channel] for a third for loop to process.
                 for entry in feed_data['data']['children']:
+                    log.debug("Comparing entries. entry timestamp is " + str(entry['data']['created_utc']) + ". timestamp_dict timestamp is " + str(timestamp_dict[channel][url]))
                     if (entry['data']['created_utc'] > timestamp_dict[channel][url]): # This will compare against the last iteration's timestamp
                         log.debug("New item. Timestamp: " + str(entry['data']['created_utc']) + " saved timestamp: " + str(timestamp_dict[channel][url]))
-                        result_str, timestamp = get_reddit_api(entry['data'])
+                        result_str = get_reddit_api(entry['data'], entry['kind'])
                         result_dict[channel].append(result_str)
 
-                ## This lock is here because writing to a dict is non-atomic, and it's
-                ## better to be safe than sorry with threaded code like this. 
-                with lock:
-                    log.debug("Lock acquired")
-                    log.debug("Now setting timestamp in timestamp_dict to be " + str(latest_timestamp) + " for url " + url + " in channel " + channel) 
-                    timestamp_dict[channel][url] = latest_timestamp
+                ## In a perfect world, latest_timestamp should always be greater than 
+                ## or equal to the stored value in timestamp_dict. Because reddit is 
+                ## absolute shit at providing API services, it sometimes returns entries
+                ## from 300k seconds ago, or about three and a half days. Here we check
+                ## for that, because it messes with assumptions in the locked code.
+                if timestamp_dict[channel][url] <= latest_timestamp:
+                        ## This lock is here because writing to a dict is non-atomic, and it's
+                        ## better to be safe than sorry with threaded code like this. 
+                        with lock:
+                            log.debug("Lock acquired")
+                            log.debug("Now setting timestamp in timestamp_dict to be " + str(latest_timestamp) + " for url " + url + " in channel " + channel) 
+                            timestamp_dict[channel][url] = latest_timestamp
+                else:
+                    log.warning("Outdated return. Latest timestamp is " + str(latest_timestamp) + ". Stored timestamp is " + str(timestamp_dict[channel][url]) + ".")
             except ValueError:
                 pass
     ## This is the output loop. For every channel's output list in result_dict, we 
