@@ -360,6 +360,7 @@ def _handle_youtube_gdata_new(url):
 
 def _handle_youtube_gdata(url):
     """http*://*youtube.com/watch?*v=*"""
+    from datetime import timedelta
     gdata_url = "http://gdata.youtube.com/feeds/api/videos/%s"
 
     match = re.match("https?://youtu.be/(.*)", url)
@@ -391,20 +392,14 @@ def _handle_youtube_gdata(url):
         racy = entry.first("yt:racy")
         media = entry.first("media:group")
         title = media.first("media:title").string
-        #secs = int(media.first("yt:duration")['seconds'])
-        #lengthstr = []
-        #hours, minutes, seconds = secs // 3600, secs // 60 % 60, secs % 60
-        #if hours > 0:
-        #    lengthstr.append("%dh" % hours)
-        #if minutes > 0:
-        #    lengthstr.append("%dm" % minutes)
-        #if seconds > 0:
-        #    lengthstr.append("%ds" % seconds)
+        secs = int(media.first("yt:duration")['seconds'])
+        
+        length = str(timedelta(seconds=secs))
         if racy:
             adult = " \x034|\x03 \x02NSFW\x02"
         else:
             adult = ""
-        return "%s \x034|\x03 uploaded by %s \x034|\x03 %s views%s" % (title, author, views, adult)
+        return "%s \x034|\x03 uploaded by %s \x034|\x03 %s views%s \x034|\x03 %s" % (title, author, views, adult, length)
 
 def _handle_helmet(url):
     """http://www.helmet.fi/record=*fin"""

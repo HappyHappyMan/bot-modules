@@ -13,7 +13,7 @@ try:
 except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
-GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&q=%s"
+GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s"
 SHORTENER_URL = "http://v.gd/create.php?format=json&url=%s"
 GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
 
@@ -30,7 +30,7 @@ def _import_yaml_data(directory=os.curdir):
 def _googling(args):
     settings = _import_yaml_data()
     args = args.decode('utf-8')
-    request = requests.get(GOOGLE_URL % (settings['google']['key'], urllib.quote(args.encode('utf-8', 'ignore'))))
+    request = requests.get(GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore'))))
     json1 = json.loads(request.content.encode('utf-8'))
     result = {}
     result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
