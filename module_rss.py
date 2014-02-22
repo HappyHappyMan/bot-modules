@@ -52,8 +52,7 @@ def event_signedon(bot):
     global client
     settings = _import_yaml_data()
     ## This has less accuracy than converting datetime() objects, but since
-    ## Reddit doesn't deal with timestamps that accurate, we can get away with
-    ## only importing one library.
+    ## Reddit doesn't deal with timestamps that accurate, we can get away with it.
     current_time = calendar.timegm(time.gmtime())
     
 

@@ -26,6 +26,7 @@ def command_ud(bot, user, channel, args):
         defNum = 0
 
     queryWord = ""
+    ## Formatting args for passing to UD. 
     if numGiven is True:
         for word in args.split(" ")[:-1]:
             queryWord = queryWord + word + "+"
@@ -38,6 +39,8 @@ def command_ud(bot, user, channel, args):
     soup = bs.BeautifulSoup(urlobj.content.encode('utf-8'))
 
     defs = soup.findAll(attrs={'class':'box'})
+
+    ## Gentle reminders to some who tend to overuse the function. 
     numResults = len(defs)
     if numResults < 1:
         if 'tripgod' in user.split('!', 1)[0]:
@@ -46,22 +49,27 @@ def command_ud(bot, user, channel, args):
             bot.say(channel, "Word not found.")
         return
 
+    ## Check that we don't try to get a definition that doesn't exist.
     try:
         definition = defs[defNum]
     except IndexError:
         bot.say(channel, "Invalid number.")
         return
+
+    ## Building the shortlink.
     defId = definition.a['data-defid']
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
-
+    ## Build our definition.
     defText = definition.find(attrs={'class':'meaning'}).text
     defText = HTMLParser.HTMLParser().unescape(defText)
 
+    ## Magic numbers rule! Or in other words, truncate the definition so the total length 
+    ## of the say() is such that it can all fit on one line. 
     maxLen = 316
     textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText) ## so that everything fits in one msg
     if textLen > maxLen:
-        truncLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3
+        truncLen = maxLen - (17 + len(queryWord) + 23 + 7 + len(shortlink) + 3)
         while True:
             if defText[truncLen] == " ":
                 break
