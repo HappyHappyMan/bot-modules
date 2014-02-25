@@ -92,3 +92,9 @@ def command_btc(bot, user, channel, args):
         return
 
     bot.say(channel, "1 btc is worth %s %s" % (rate.encode('utf-8'), conv[-3:]))
+
+def command_doge(bot, user, channel, args):
+    data = requests.get("https://www.dogeapi.com/wow/?a=get_current_price&amount_doge=1")
+    
+    bot.say(channel, "1 dogecoin is worth %s USD." % data.content)
+    return
