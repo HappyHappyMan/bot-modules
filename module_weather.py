@@ -34,6 +34,7 @@ def _get_latlng(city):
 
 def _get_saved_data(nick, conn):
     DB = sqlite3.connect(conn)
+    DB.text_factory = str
     c = DB.cursor()
     userdata = ""
 
@@ -52,6 +53,7 @@ def _set_saved_data(nick, location, conn, temp_type, forecast_type):
     Helper function to write updated data to the database.
     """
     DB = sqlite3.connect(conn)
+    DB.text_factory = str
     c = DB.cursor()
 
     testresult = c.execute("SELECT temp_type FROM weather WHERE nick LIKE ?", (nick,))
