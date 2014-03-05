@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import xml.etree.ElementTree as ET
-import sqlite3
 import os
 import logging
+from modules.dbHandler import dbHandler
 
 log = logging.getLogger('lastfm')
 
@@ -28,71 +28,28 @@ def command_np(bot, user, channel, args):
     """Lastfm module! Usage: .np without arguments will return your now playing. .np add "lastfm username" (no quotes) to add your name to the db."""
 
     settings = _import_yaml_data()
-
-    ## All the saved users are in a sqlite3 database
-    DB = sqlite3.connect(settings['lastfm']['database'])
-    nick = bot.factory.getNick(user)
+    db = dbHandler(bot.factory.getDBPath())
 
     if args.split(" ")[0] == "add": # If the user wants to add or update their name in the db
         lastid_updated = args.split(" ")[1].strip().lower()
 
-        c = DB.cursor()
-        testresult = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
+        db.set("lastfm", user, lastid_updated)
 
-        ## This tests whether the user already has an entry in the database, since we
-        ## need to know whether to execute an UPDATE or INSERT query.
-        try:
-            testresult.fetchone()[0]
-            worked = True
-        except TypeError:
-            worked = False
-
-        if worked is True: # The user wants to update their lastfm entry
-            vartuple = (str(lastid_updated).lower(), str(nick).lower())
-            try:
-                c.execute("UPDATE lookup SET lastid=(?) WHERE nick=(?)", vartuple)
-            except sqlite3.Error, msg:
-                log.error(msg)
-
-            DB.commit()
-            c.close()
-            DB.close()
-
-            bot.say(nick, "Last.fm username updated!")
-            return
-        else: # The user is adding their lastfm entry for the first time
-            vartuple = (str(nick).lower(), str(lastid_updated).lower())
-            try:
-                c.execute("INSERT INTO lookup VALUES (?, ?)", vartuple)
-            except sqlite3.Error, msg:
-                print msg
-
-            DB.commit()
-            c.close()
-            DB.close()
-
-            bot.say(nick, "Last.fm username set!")
-            return
+        bot.say(bot.factory.getNick(), "Last.fm username set!")
+        return
     else: # The user wants to retrieve now playing information
-        c = DB.cursor()
-        if len(args.split(" ")[0]) > 0: # If they want somebody else's
-            result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
+        query_nick = args.split(" ")[0]
+        if len(query_nick) > 0: # If they want somebody else's
+            lastid = db.get("lastfm", query_nick)
         else: # If they want their own
-            result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
-        
-        ## This is wrapped in a try/except because sometimes people don't have entries in the db.
-        try:
-            lastid = result.fetchone()[0]
-        except TypeError: # They execute an invalid query
-            if args.split(" ")[0].strip() == "": # If they were asking for themselves
-                bot.say(channel, "You don't exist in my db! You should really look into that.")
-                return
-            else: # Or for somebody else
-                bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
-            return
+            lastid = db.get("lastfm", user)
 
-        c.close()
-        DB.close()
+        if lastid is None:
+            if query_nick > 0:
+                bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
+            else:
+                bot.say(channel, "You don't exist in my db! You should really look into that.")
+            return
 
         ## Whoof. After that guantlet, we can be reasonably sure that we have valid input
         ## for the API call. Time to go get it.
@@ -136,30 +93,21 @@ def command_np(bot, user, channel, args):
 def command_compare(bot, user, channel, args):
 
     settings = _import_yaml_data()
+    db = dbHandler(bot.factory.getDBPath())
 
-    DB = sqlite3.connect(settings["lastfm"]["database"])
     COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
-    nick = bot.factory.getNick(user)
 
-    c = DB.cursor()
-    arg = (args.split(" ")[0].strip().lower(),) # Nick you asked to compare with
-    me = (nick.strip().lower(),) # Module caller's nick
-    lastid = ""
-    yourid = ""
+    compare_nick = args.split(" ")[0].strip() # Ensure only one nick gets processed
+    lastid = db.get("lastfm", compare_nick)
+    yourid = db.get("lastfm", user)
 
-    for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", arg):
-        lastid = row[0]
-    for row in c.execute("SELECT lastid FROM lookup WHERE nick LIKE (?)", me):
-        yourid = row[0]
-    c.close()
-    DB.close()
 
     ## Handles the two possible ways a user couldn't exist to be compared with.
-    if lastid == "":
+    if lastid is None:
         bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
         return
-    if yourid == "":
-        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % nick)
+    if yourid is None:
+        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % bot.factory.getNick())
         return
     else:
         import math  # Yeah, yeah, whatever
@@ -201,25 +149,21 @@ def command_compare(bot, user, channel, args):
 def command_charts(bot, user, channel, args):
     settings = _import_yaml_data()
 
-    DB = sqlite3.connect(settings["lastfm"]["database"])
-    nick = bot.factory.getNick(user)
-    c = DB.cursor()
+    db = dbHandler(bot.factory.getDBPath())
 
     ## Checks whether a user wants their charts or somebody else's by doing a len()
     ## check on " "-tokenized args list.
     if len(args.split(" ")[0]) > 0:
-        result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (args.split(" ")[0].lower(),))
+        nick = args.split(" ")[0]
+        lastid = db.get("lastfm", nick)
     else:
-        result = c.execute("SELECT lastid FROM lookup WHERE nick LIKE ?", (nick.lower(),))
+        nick = bot.factory.getNick(user)
+        lastid = db.get("lastfm", user)
 
-    lastid = result.fetchone()[0]
-
-    if type(lastid) is None:
-        bot.say(channel, "That user doesn't exist in my db! They should look into that.")
+    if lastid is None:
+        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % nick)
         return
 
-    c.close()
-    DB.close()
 
     call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=5&period=7day" % ("user.gettopartists", str(lastid), settings["lastfm"]["key"])
     xmlreturn = requests.get(call_url)
