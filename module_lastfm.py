@@ -39,10 +39,9 @@ def command_np(bot, user, channel, args):
     settings = _import_yaml_data()
     db = dbHandler(bot.factory.getDBPath())
 
-    # The user wants to retrieve now playing information
     query_nick = args.split(" ")[0].strip()
     log.debug("Querying database for lastid")
-    if len(query_nick) > 0: # If they want somebody else's
+    if len(query_nick) > 0: # If they want somebody else's lfm info
         log.debug("Wanting lastid for %s" % query_nick)
         lastid = db.get("lastfm", query_nick)
     else: # If they want their own
@@ -65,8 +64,13 @@ def command_np(bot, user, channel, args):
     log.debug("Calling API for lastid %s now" % lastid)
     call_url = API_URL % ("user.getrecenttracks", str(lastid), settings["lastfm"]["key"])
     xmlreturn = requests.get(call_url)
+
+    if xmlreturn.status_code is not 200:
+        bot.say(channel, "Wow, looks like somebody didn't read the help text properly before adding their name to the db. Try again.")
+
     data = xmlreturn.content.encode('utf-8')
     tree = ET.fromstring(data)
+
 
     ## I do wish the etree library formatted everything into a dict like the json
     ## library does, then maybe this wouldn't seem like such a mess of magic
@@ -101,6 +105,7 @@ def command_np(bot, user, channel, args):
 
 
 def command_compare(bot, user, channel, args):
+    """Compares your last.fm tasteometer rating with somebody else's."""
 
     settings = _import_yaml_data()
     db = dbHandler(bot.factory.getDBPath())
@@ -157,6 +162,7 @@ def command_compare(bot, user, channel, args):
 
 
 def command_charts(bot, user, channel, args):
+    """Gets yours or somebody else's top five artists over the last week"""
     settings = _import_yaml_data()
 
     db = dbHandler(bot.factory.getDBPath())

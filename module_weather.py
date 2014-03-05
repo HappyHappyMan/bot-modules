@@ -178,7 +178,7 @@ def command_weather(bot, user, channel, args):
                 units = "?units=us"
             data = requests.get(API_URL % (settings["weather"]["key"], latlng[0]) + units)
         else:
-            bot.say(channel, "You're not in the database! Set a location with .wadd.")
+            bot.say(channel, "You're not in the database! Set a location with .add weather <your location>.")
             return
 
     weather_data = json.loads(data.content.encode('utf-8'))

@@ -25,6 +25,7 @@ import logging
 import logging.handlers
 
 log = logging.getLogger('rss') 
+log.setLevel(20)
 
 ## DO NOT use urllib2 with this module! urllib2 is very VERY bad about thread
 ## safety, you WILL run into at least two kinds of stupid race condition-based
