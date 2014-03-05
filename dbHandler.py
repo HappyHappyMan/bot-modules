@@ -109,42 +109,56 @@ class dbHandler(object):
                 return search_userid
             else:
                 try:
-                    #1
+                    log.debug("_get_userid(): 1")
                     result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?",
                         (nick,))
                     uid = result.fetchone()[0]
                     try:
-                        #11
+                        log.debug("_get_userid(): 11")
                         ident = user.split("!", 1)[1].split("@", 1)[0]
                         result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
                             (ident,))
                         uid = result.fetchone()[0]
                         return uid
                     except TypeError:
-                        #10
+                        log.debug("_get_userid(): 10")
                         raise IDNotFoundError
                 except TypeError:
                     try:
                         ident = user.split("!", 1)[1].split("@", 1)[0]
                         try:
-                            #01
+                            log.debug("_get_userid(): 01")
                             result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
                                 (ident,))
                             uid = result.fetchone()[0] 
                             try:
-                                #011
+                                log.debug("_get_userid(): 011")
                                 host = user.split("@", 1)[1]
-                                result = self.db_cur.execute("SELECT userid FROM Users WHERE host  LIKE ?",
+                                result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
                                     (host,))
                                 return result.fetchone()[0]
                             except TypeError:
-                                #010
+                                log.debug("_get_userid(): 010")
                                 raise IDNotFoundError
                         except TypeError:
-                            #00
+                            log.debug("_get_userid(): 00")
                             raise IDNotFoundError
                     except IndexError:
-                        raise IDNotFoundError
+                        log.debug("_get_userid(): ident not found, we didn't get a full userstring.")
+                        try:
+                            log.debug("_get_userid(): Searching host")
+                            result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
+                                ("%%" + nick + "%%",))
+                            uid = result.fetchone()[0]
+                            return uid
+                        except TypeError:
+                            try:
+                                log.debug("_get_userid(): Did not find matching host, checking ident")
+                                result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
+                                    ("%%" + nick + "%%",))
+                            except TypeError:
+                                log.debug("_get_userid(): No match, returning IDNotFoundError")
+                                raise IDNotFoundError
 
 
     def _set_userid(self, user):
