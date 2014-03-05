@@ -23,6 +23,7 @@ class dbHandler(object):
     def get(self, module, user):
         try:
             userid = self._get_userid(user)
+            log.debug("get(): Found userid as " + str(userid))
         except IDNotFoundError:
             log.debug("get(): _get_userid() raised IDNotFoundError")
             return None
@@ -111,16 +112,16 @@ class dbHandler(object):
                 return search_userid
             else:
                 try:
-                    log.debug("_get_userid(): 1")
                     result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?",
                         (nick,))
                     uid = result.fetchone()[0]
+                    log.debug("_get_userid(): 1")
                     try:
-                        log.debug("_get_userid(): 11")
                         ident = user.split("!", 1)[1].split("@", 1)[0]
                         result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
                             (ident,))
                         uid = result.fetchone()[0]
+                        log.debug("_get_userid(): 11")
                         return uid
                     except TypeError:
                         log.debug("_get_userid(): 10")
@@ -138,7 +139,9 @@ class dbHandler(object):
                                 host = user.split("@", 1)[1]
                                 result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
                                     (host,))
-                                return result.fetchone()[0]
+                                uid = result.fetchone()[0]
+                                self._set_alias(uid, user.split("!", 1)[0])
+                                return uid
                             except TypeError:
                                 log.debug("_get_userid(): 010")
                                 raise IDNotFoundError
@@ -150,18 +153,24 @@ class dbHandler(object):
                         try:
                             log.debug("_get_userid(): Searching host")
                             result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
-                                ("%%" + nick + "%%",))
+                                ("%" + nick + "%",))
                             uid = result.fetchone()[0]
                             return uid
                         except TypeError:
                             try:
                                 log.debug("_get_userid(): Did not find matching host, checking ident")
                                 result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
-                                    ("%%" + nick + "%%",))
+                                    ("%" + nick + "%",))
                                 return result.fetchone()[0]
                             except TypeError:
                                 log.debug("_get_userid(): No match, searching aliases")
-                                uid = self._get_alias(nick)
+                                try:
+                                    uid = self._get_alias(nick)
+                                    log.debug("_get_userid(): Found uid is " + str(uid))
+                                    return uid
+                                except IDNotFoundError:
+                                    log.debug("_get_userid(): Raising IDNotFoundError, last hope was no good")
+                                    raise IDNotFoundError
         return
 
     def _get_alias(self, searchstr):
@@ -174,8 +183,10 @@ class dbHandler(object):
         """
         log.debug("_get_alias(): Received control")
         try:
-            result = self.db_cur.execute("SELECT userid FROM Aliases WHERE aliases LIKE ?",
-                ("%%" + searchstr + "%%",))
+            searchy = "%" + searchstr + "%"
+            log.debug("_get_alias(): searching with search string " + searchy)
+            result = self.db_cur.execute("SELECT userid FROM aliases WHERE aliases LIKE ?",
+                (searchy,))
             return result.fetchone()[0]
         except TypeError:
             log.debug("_get_alias(): string not in aliases, raising IDNotFoundError")
@@ -191,7 +202,7 @@ class dbHandler(object):
                 (aliases, userid))
         except TypeError:
             self.db_cur.execute("INSERT INTO aliases VALUES (?, ?)",
-                (userid, aliases))
+                (userid, alias))
 
     def _set_userid(self, user):
         """
@@ -231,15 +242,15 @@ class dbHandler(object):
             ## This is the getter logic
             log.debug("_handle_lastfm(): Entering getter logic")
             try:
+                log.debug("_handle_lastfm(): Userid is " + str(userid))
                 testresult = self.db_cur.execute("SELECT lastid FROM lastfm WHERE userid=(?)", 
                     (userid,))
                 lastid = testresult.fetchone()[0]
                 log.debug("_handle_lastfm(): Found lastid as %s" % lastid)
                 return lastid
             except TypeError:
-                log.debug("_handle_lastfm(): Could not find lastid in DB, setting alias")
-                self._set_alias(userid, user.split("!", 1)[0])
-                raise IDNotFoundError
+                log.debug("_handle_lastfm(): Could not find lastid in DB, trying alias search with args %s" % args)
+                return self._get_alias(args)
         else:
             ## This is the setter logic
             if userid is None:
