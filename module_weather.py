@@ -130,7 +130,7 @@ def _parse_weather_output(weather_data, city_name, measure_type):
     return weather_string
 
 def command_weather(bot, user, channel, args):
-    """Gives weather for location. Follows the same syntax as .wadd."""
+    """Gives weather for location. Usage: .weather location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
 
     settings = _import_yaml_data()
     measure_type = 0
@@ -190,7 +190,7 @@ def command_weather(bot, user, channel, args):
     return
 
 def command_forecast(bot, user, channel, args):
-    """Gives you a forecast. To use, add either :brief or :summary to your weather query. :brief will PM you always."""
+    """Gives you a forecast. Usage: .forecast location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified. :brief will PM you always."""
     API_URL = "https://api.forecast.io/forecast/%s/%s"
     settings = _import_yaml_data()
     nick = bot.factory.getNick(user)
@@ -249,7 +249,7 @@ def command_forecast(bot, user, channel, args):
         for line in forecast_strings:
             bot.say(nick, line.encode('utf-8'))
 
-def command_wadd(bot, user, channel, args):
+def _add_weather(bot, user, args):
     """Sets your location. Usage: .wadd location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
 
     db = dbHandler(bot.factory.getDBPath())
@@ -264,9 +264,9 @@ def command_wadd(bot, user, channel, args):
     bot.say(nick, "Location set!")
 
 def command_w(bot, user, channel, args):
-    """Gives weather for location. Follows the same syntax as .wadd."""
+    """Alias to weather. See .help weather for details."""
     return command_weather(bot, user, channel, args)
 
 def command_f(bot, user, channel, args):
-    """Alias to forecast. Uses the same syntax."""
+    """Alias to forecast. See .help forecast for details"""
     return command_forecast(bot, user, channel, args)
