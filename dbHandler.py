@@ -9,6 +9,7 @@ class dbHandler(object):
     def __init__(self, db_path):
         self.db_path = db_path
         self.db_conn = sqlite3.connect(db_path)
+        self.db_conn.text_factory = str
         self.db_cur = self.db_conn.cursor()
 
 
@@ -18,9 +19,8 @@ class dbHandler(object):
 
 
     def get(self, module, user):
-        user = user.lower()
         try:
-            userid = self._get_userid(user) # to be implemented
+            userid = self._get_userid(user)
         except IDNotFoundError:
             log.debug("get(): _get_userid() raised IDNotFoundError")
             return None
@@ -35,7 +35,6 @@ class dbHandler(object):
             return data
 
     def set(self, module, user, args):
-        user = user.lower()
         try:
             log.debug("set(): Passing control to _get_userid()")
             userid = self._get_userid(user)
@@ -77,28 +76,29 @@ class dbHandler(object):
         Accepts full nick!ident@host as param "user". Returns either an integer
         representing the userid or raises IDNotFoundError.
         """
-        log.debug("_get_userid(): Looking for userid for user %s " % user)
         try:
+            log.debug("_get_userid(): Looking for userid for user %s " % user)
             result = self.db_cur.execute("SELECT userid FROM Users WHERE User LIKE ?", 
                 (user,))
             uid = result.fetchone()[0]
+            log.debug("_get_userid(): Found userid %s" % str(uid))
             return uid
         except TypeError:
-            # Here is the rationale behind this seemingly ridiculous code.
-            # There are three parts to a userstring: the nick, the ident, and the host.
-            # This makes eight possible combinations of matches between two userstrings'
-            # parts. i.e., "both nicks match, both idents match, hosts don't match" or
-            # "nicks don't match, idents match, hosts match", etc. There are eight possible
-            # combinations in total.
-            # 
-            # Now, only three of these eight combinations are likely to be the same person.
-            # One of those three is that all three parts match, which has already been
-            # handled. So we only have two cases to deal with here:
-            # 1) nicks don't match, but idents and hosts do (011)
-            # 2) nicks and idents match,  but hosts don't. (110)
-            # 
-            # This code goes through and finds those possibilities, and returns userids
-            # in both cases. Otherwise, it raises an Error to be caught up above.
+        # Here is the rationale behind this seemingly ridiculous code.
+        # There are three parts to a userstring: the nick, the ident, and the host.
+        # This makes eight possible combinations of matches between two userstrings'
+        # parts. i.e., "both nicks match, both idents match, hosts don't match" or
+        # "nicks don't match, idents match, hosts match", etc. There are eight possible
+        # combinations in total.
+        # 
+        # Now, only three of these eight combinations are likely to be the same person.
+        # One of those three is that all three parts match, which has already been
+        # handled. So we only have two cases to deal with here:
+        # 1) nicks don't match, but idents and hosts do (011)
+        # 2) nicks and idents match,  but hosts don't. (110)
+        # 
+        # This code goes through and finds those possibilities, and returns userids
+        # in both cases. Otherwise, it raises an Error to be caught up above.
             log.debug("_get_userid(): user did not match full userstring")
             nick = user.split("!", 1)[0]
 
@@ -180,11 +180,15 @@ class dbHandler(object):
         """ 
         if args is None:
             ## This is the getter logic
+            log.debug("_handle_lastfm(): Entering getter logic")
             try:
-                testresult = self.db_cur.execute("SELECT lastid FROM lastfm WHERE userid=?", 
+                testresult = self.db_cur.execute("SELECT lastid FROM lastfm WHERE userid=(?)", 
                     (userid,))
-                return testresult.fetchone()[0]
+                lastid = testresult.fetchone()[0]
+                log.debug("_handle_lastfm(): Found lastid as %s" % lastid)
+                return lastid
             except TypeError:
+                log.debug("_handle_lastfm(): Could not find lastid in DB")
                 raise IDNotFoundError
         else:
             ## This is the setter logic
@@ -240,7 +244,7 @@ class dbHandler(object):
                     # and, if so, we update the entry.
                     testresult = self.db_cur.execute("SELECT userid FROM weather WHERE userid=(?)", 
                         (userid,))
-                    testresult.fetchone()
+                    testresult.fetchone()[0]
                     self.db_cur.execute("UPDATE weather SET temp_type=(?), location=(?), forecast_type=(?) WHERE userid=(?)",
                         (args[1], args[0], args[2], userid))
                 except TypeError:
@@ -248,6 +252,19 @@ class dbHandler(object):
                     # and create an entrirely new row in the table for that user.
                     self.db_cur.execute("INSERT INTO weather VALUES (?, ?, ?, ?)", 
                         (userid, args[0], args[1], args[2]))
+        return
+
+    def _handle_time(self, userid, user=None, args=None):
+        """
+        Handler for time module, queries location row in weather table
+        """
+        if args is None:
+            # This is the getter logic
+            userdata = self.db_cur.execute("SELECT location FROM weather WHERE userid=(?)",
+                (userid,))
+            return userdata.fetchone()[0]
+        else:
+            pass
         return
 
 class IDNotFoundError(Exception):

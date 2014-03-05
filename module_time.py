@@ -2,9 +2,10 @@
 
 import os
 import time
-import urllib2
+import requests
 import urllib
 import json
+from modules.dbHandler import dbHandler
 
 
 def command_time(bot, user, channel, args):
@@ -12,20 +13,24 @@ def command_time(bot, user, channel, args):
 
     LATLNG_URL = "https://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false"
     TZ_URL = "https://maps.googleapis.com/maps/api/timezone/json?location=%s,%s&timestamp=%s&sensor=false"
+    db = dbHandler(bot.factory.getDBPath())
 
-    def is_number(args):
-        try:
-            int(args)
-            return True
-        except ValueError:
-            return False
-
-    if is_number(args) is True:
-        latlng_data = json.load(urllib2.urlopen(LATLNG_URL % args))
+    if args:
+        place = db.get("time", args.split(" ", 1))
+        if place is not None:
+            latlng_data = requests.get(LATLNG_URL % urllib.quote(place))
+            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
+        else:
+            latlng_data = requests.get(LATLNG_URL % urllib.quote(args))
+            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
     else:
-        if args[:2] == "in":
-            args = args[2:]
-        latlng_data = json.load(urllib2.urlopen(LATLNG_URL % urllib.quote(args)))
+        place = db.get("time", user)
+        if place is not None:
+            latlng_data = requests.get(LATLNG_URL % urllib.quote(place))
+            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
+        else:
+            bot.say(channel, "Set your location using .weather add.")
+            return
 
     try:
         lat = latlng_data['results'][0]['geometry']['location']['lat']
@@ -36,7 +41,8 @@ def command_time(bot, user, channel, args):
 
     timestamp = time.time()
 
-    tz_data = json.load(urllib2.urlopen(TZ_URL % (lat, lng, timestamp)))
+    tz_data = requests.get(TZ_URL % (lat, lng, timestamp))
+    tz_data = json.loads(tz_data.content.encode('utf-8'))
     tzid = tz_data['timeZoneId']
     raw_offset = tz_data['rawOffset']
     dst_offset = tz_data['dstOffset']
