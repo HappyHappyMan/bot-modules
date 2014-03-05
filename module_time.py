@@ -16,7 +16,7 @@ def command_time(bot, user, channel, args):
     db = dbHandler(bot.factory.getDBPath())
 
     if args:
-        place = db.get("time", args.split(" ", 1))
+        place = db.get("time", args.split(" ", 1)[0])
         if place is not None:
             latlng_data = requests.get(LATLNG_URL % urllib.quote(place))
             latlng_data = json.loads(latlng_data.content.encode('utf-8'))

@@ -55,7 +55,6 @@ def event_signedon(bot):
     ## Reddit doesn't deal with timestamps that accurate, we can get away with it.
     current_time = calendar.timegm(time.gmtime())
     
-
     timestamp_dict = {}
 
     client = requests.session()
