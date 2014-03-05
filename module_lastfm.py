@@ -6,6 +6,7 @@ import logging
 from modules.dbHandler import dbHandler
 
 log = logging.getLogger('lastfm')
+# log.setLevel(20) # suppress debug output
 
 try:
     import requests, yaml  
@@ -40,6 +41,10 @@ def command_np(bot, user, channel, args):
     db = dbHandler(bot.factory.getDBPath())
 
     query_nick = args.split(" ")[0].strip()
+
+    if query_nick == "add":
+        bot.say(channel, 'Use .add lastfm "lastfm username" to add your lastfm to the db.')
+        return
     log.debug("Querying database for lastid")
     if len(query_nick) > 0: # If they want somebody else's lfm info
         log.debug("Wanting lastid for %s" % query_nick)
