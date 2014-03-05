@@ -8,6 +8,7 @@ import logging
 from modules.dbHandler import dbHandler
 
 log = logging.getLogger('weather')
+# log.setLevel(20) # suppress debug output
 
 try:
     import requests, yaml  
@@ -20,7 +21,7 @@ def _import_yaml_data(directory=os.curdir):
         settings_path = os.path.join(directory, "modules", "weather.settings")
         return yaml.load(file(settings_path))
     except OSError:
-            log.warning("Settings file for Weather Underground not set up; please create a Weather Underground API account and modify the example settings file.")
+            log.warning("Settings file for forecast.io not set up; please create a Weather Underground API account and modify the example settings file.")
             return
 
 def _get_latlng(city):
@@ -140,9 +141,14 @@ def command_weather(bot, user, channel, args):
 
     if args:
         args = args.split(":")
-        latlng = _get_latlng(args[0])
-        units = ""
         args = _parse_args(args)
+        db_data = db.get("weather", args[0])
+        if db_data is not None:
+            latlng = _get_latlng(db_data[1])
+        else:
+            latlng = _get_latlng(args[0])
+
+        units = ""
 
         ## set the units type for the API call
         if args[1] == 1:
@@ -199,7 +205,12 @@ def command_forecast(bot, user, channel, args):
     if args:
         args = args.split(":")
         args = _parse_args(args)
-        latlng = _get_latlng(args[0])
+        db_data = db.get("weather", args[0])
+        if db_data is not None:
+            latlng = _get_latlng(db_data[1])
+        else:
+            latlng = _get_latlng(args[0])
+        
         units = ""
 
         measure_type = args[1]
@@ -227,7 +238,7 @@ def command_forecast(bot, user, channel, args):
             elif measure_type == 4:
                 units = "?units=us"
         else:
-            bot.say(channel, "You're not in the database! Set a location with .wadd.")
+            bot.say(channel, "You're not in the database! Set a location with .add weather <your location>.")
             return
 
     data = requests.get(API_URL % (settings["weather"]["key"], latlng[0]) + units)
@@ -250,7 +261,7 @@ def command_forecast(bot, user, channel, args):
             bot.say(nick, line.encode('utf-8'))
 
 def _add_weather(bot, user, args):
-    """Sets your location. Usage: .wadd location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
+    """Sets your location. Usage: location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
 
     db = dbHandler(bot.factory.getDBPath())
 
