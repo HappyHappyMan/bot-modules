@@ -3,9 +3,9 @@
 import json
 import urllib
 import os
-import sqlite3
 import datetime
 import logging
+from modules.dbHandler import dbHandler
 
 log = logging.getLogger('weather')
 
@@ -32,67 +32,6 @@ def _get_latlng(city):
     name = latlng_data['results'][0]['formatted_address']
     return (str(lat) + "," + str(lng), name)
 
-def _get_saved_data(nick, conn):
-    DB = sqlite3.connect(conn)
-    DB.text_factory = str
-    c = DB.cursor()
-    userdata = ""
-
-    result = c.execute("SELECT temp_type,location,forecast_type FROM weather WHERE nick LIKE ?", (nick,))
-
-    userdata = result.fetchone()
-
-    try:
-        len(userdata)
-        return userdata, True
-    except TypeError:
-        return userdata, False
-
-def _set_saved_data(nick, location, conn, temp_type, forecast_type):
-    """
-    Helper function to write updated data to the database.
-    """
-    DB = sqlite3.connect(conn)
-    DB.text_factory = str
-    c = DB.cursor()
-
-    testresult = c.execute("SELECT temp_type FROM weather WHERE nick LIKE ?", (nick,))
-
-    ## Test whether user already exists in the database
-    try:
-        testresult.fetchone()[0]
-        worked = True
-    except TypeError:
-        worked = False
-
-    if worked is True:
-        ## Execute an UPDATE query
-        vartuple = (temp_type, nick, location, forecast_type)
-
-        try:
-            c.execute("UPDATE weather SET temp_type=(?), location=(?), forecast_type=(?) WHERE nick=(?)", (vartuple[0],vartuple[2],vartuple[3],vartuple[1]))
-        except sqlite3.Error as e:
-            print e.args[0]
-
-        DB.commit()
-        c.close()
-        DB.close()
-
-        return
-    else:
-        ## Execute an INSERT query
-        vartuple = (temp_type, nick, location, forecast_type)
-
-        try:
-            c.execute("INSERT INTO weather VALUES (?, ?, ?, ?)", vartuple)
-        except sqlite3.Error as e:
-            print e.args[0]
-
-        DB.commit()
-        c.close()
-        DB.close()
-
-        return
 
 def _parse_forecast_output(weather_data, city_name, measure_type):
 
@@ -196,6 +135,7 @@ def command_weather(bot, user, channel, args):
     settings = _import_yaml_data()
     measure_type = 0
 
+    db = dbHandler(bot.factory.getDBPath())
     API_URL = "https://api.forecast.io/forecast/%s/%s"
 
     if args:
@@ -222,9 +162,8 @@ def command_weather(bot, user, channel, args):
 
         data = requests.get(url)
     else:
-        nick = bot.factory.getNick(user)
-        db_data, success = _get_saved_data(nick.lower(), settings['weather']['db'])
-        if success is True:
+        db_data = db.get("weather", user)
+        if db_data is not None:
             units = ""
             latlng = _get_latlng(db_data[1])
             measure_type = db_data[0]
@@ -254,7 +193,8 @@ def command_forecast(bot, user, channel, args):
     """Gives you a forecast. To use, add either :brief or :summary to your weather query. :brief will PM you always."""
     API_URL = "https://api.forecast.io/forecast/%s/%s"
     settings = _import_yaml_data()
-    nick = user.split('!', 1)[0]
+    nick = bot.factory.getNick(user)
+    db = dbHandler(bot.factory.getDBPath())
 
     if args:
         args = args.split(":")
@@ -273,8 +213,8 @@ def command_forecast(bot, user, channel, args):
         elif measure_type == 4:
             units = "?units=us"
     else:
-        db_data, success = _get_saved_data(nick.lower(), settings['weather']['db'])
-        if success is True:
+        db_data = db.get("weather", user)
+        if db_data is not None:
             units = ""
             latlng = _get_latlng(db_data[1])
             measure_type = db_data[0]
@@ -312,14 +252,14 @@ def command_forecast(bot, user, channel, args):
 def command_wadd(bot, user, channel, args):
     """Sets your location. Usage: .wadd location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
 
-    settings = _import_yaml_data()
+    db = dbHandler(bot.factory.getDBPath())
 
     args = args.split(":")
     nick = user.split('!', 1)[0]
 
     args = _parse_args(args)
 
-    _set_saved_data(nick.lower(), args[0], settings['weather']['db'], args[1], args[2])
+    db.set("weather", user, args)
 
     bot.say(nick, "Location set!")
 

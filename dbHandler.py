@@ -180,21 +180,75 @@ class dbHandler(object):
         """ 
         if args is None:
             ## This is the getter logic
-            testresult = self.db_cur.execute("SELECT lastid FROM lastfm WHERE userid=?", (userid,))
-            return testresult.fetchone()[0]
+            try:
+                testresult = self.db_cur.execute("SELECT lastid FROM lastfm WHERE userid=?", 
+                    (userid,))
+                return testresult.fetchone()[0]
+            except TypeError:
+                raise IDNotFoundError
         else:
             ## This is the setter logic
             if userid is None:
-                ## This means that the entry is brand-new
+                ## This means that the user and entry are brand-new
                 uid = self._get_userid(user) # get our new userid
 
                 self.db_cur.execute("INSERT INTO lastfm VALUES (?, ?)", 
                     (uid, args))
             else:
-                self.db_cur.execute("UPDATE lastfm SET lastid=(?) WHERE userid=(?)",
-                    (args,userid))
+                # This means just the entry is brand-new, but that the user already
+                # exists in the Users table.
+                try:
+                    # We first test whether the userid is already in the table, 
+                    # and, if so, we update the entry.
+                    testresult = self.db_cur.execute("SELECT userid FROM lastfm WHERE userid=(?)",
+                        (userid,))
+                    testresult.fetchone()[0]
+                    self.db_cur.execute("UPDATE lastfm SET lastid=(?) WHERE userid=(?)",
+                        (args,userid))
+                except TypeError:
+                    # If the userid is not present in the table, we drop down here,
+                    # and create an entirely new row in the table for that user.
+                    self.db_cur.execute("INSERT INTO lastfm VALUES (?, ?)",
+                        (userid, args))
         return
 
+    def _handle_weather(self, userid, user=None, args=None):
+        """
+        Handler for weather module.
+        """
+        if args is None:
+            # This is the getter logic
+            try:
+                userdata = self.db_cur.execute("SELECT temp_type,location,forecast_type FROM weather WHERE userid=(?)", 
+                    (userid,))
+                return userdata.fetchone()
+            except TypeError:
+                raise IDNotFoundError
+        else:
+            # This is the setter logic
+            if userid is None:
+                # This means that the user and entry are brand-new
+                uid = self._get_userid(user)
+
+                self.db_cur.execute("INSERT INTO weather VALUES (?, ?, ?, ?)", 
+                    (uid, args[0], args[1], args[2]))
+            else:
+                # This means just the entry is brand-new, but that the user already
+                # exists in the Users table.
+                try:
+                    # We first test whether the userid is already in the table,
+                    # and, if so, we update the entry.
+                    testresult = self.db_cur.execute("SELECT userid FROM weather WHERE userid=(?)", 
+                        (userid,))
+                    testresult.fetchone()
+                    self.db_cur.execute("UPDATE weather SET temp_type=(?), location=(?), forecast_type=(?) WHERE userid=(?)",
+                        (args[1], args[0], args[2], userid))
+                except TypeError:
+                    # If the userid is not present in the table, we drop down here,
+                    # and create an entrirely new row in the table for that user.
+                    self.db_cur.execute("INSERT INTO weather VALUES (?, ?, ?, ?)", 
+                        (userid, args[0], args[1], args[2]))
+        return
 
 class IDNotFoundError(Exception):
     pass

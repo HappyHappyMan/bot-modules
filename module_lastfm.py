@@ -35,17 +35,18 @@ def command_np(bot, user, channel, args):
 
         db.set("lastfm", user, lastid_updated)
 
-        bot.say(bot.factory.getNick(), "Last.fm username set!")
+        bot.say(bot.factory.getNick(user), "Last.fm username set!")
         return
     else: # The user wants to retrieve now playing information
-        query_nick = args.split(" ")[0]
+        query_nick = args.split(" ")[0].strip()
         if len(query_nick) > 0: # If they want somebody else's
             lastid = db.get("lastfm", query_nick)
         else: # If they want their own
             lastid = db.get("lastfm", user)
 
         if lastid is None:
-            if query_nick > 0:
+            if len(query_nick) > 0:
+                log.debug("length of query_nick is " + str(len(query_nick)))
                 bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
             else:
                 bot.say(channel, "You don't exist in my db! You should really look into that.")
