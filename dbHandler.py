@@ -2,6 +2,7 @@ import sqlite3
 import logging
 
 log = logging.getLogger("dbHandler")
+# log.setLevel(20) # suppress debug output
 
 class dbHandler(object):
     """handles database connections for modules."""
@@ -11,6 +12,7 @@ class dbHandler(object):
         self.db_conn = sqlite3.connect(db_path)
         self.db_conn.text_factory = str
         self.db_cur = self.db_conn.cursor()
+        self.db_cur.execute("PRAGMA foreign_keys=1")
 
 
     def __del__(self):
@@ -27,7 +29,7 @@ class dbHandler(object):
         handler_method = getattr(self, "_handle_%s" % module, None)
 
         if handler_method is not None:
-            log.debug("Passing control from get() to handle_%s" % module)
+            log.info("Passing control from get() to handle_%s" % module)
             try:
                 data = handler_method(userid)
             except IDNotFoundError:
@@ -45,7 +47,7 @@ class dbHandler(object):
         log.debug("set(): Found userid " + str(userid))
         handler_method = getattr(self, "_handle_%s" % module, None)
 
-        log.debug("Found handler method _handle_%s()" % module)
+        log.info("Found handler method _handle_%s()" % module)
 
         if handler_method is not None:
             log.debug("set(): Passing control from set() to handle_%s" % module)
@@ -156,10 +158,40 @@ class dbHandler(object):
                                 log.debug("_get_userid(): Did not find matching host, checking ident")
                                 result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
                                     ("%%" + nick + "%%",))
+                                return result.fetchone()[0]
                             except TypeError:
-                                log.debug("_get_userid(): No match, returning IDNotFoundError")
-                                raise IDNotFoundError
+                                log.debug("_get_userid(): No match, searching aliases")
+                                uid = self._get_alias(nick)
+        return
 
+    def _get_alias(self, searchstr):
+        """
+        This searches for an alias, if available, and returns the userid associated
+        with that alias if one is. Aliases are alternate nicks people use, that 
+        don't necessarily match well with what nick they typically use. 
+
+        The alias column the table is a comma-delineated list of aliases.
+        """
+        log.debug("_get_alias(): Received control")
+        try:
+            result = self.db_cur.execute("SELECT userid FROM Aliases WHERE aliases LIKE ?",
+                ("%%" + searchstr + "%%",))
+            return result.fetchone()[0]
+        except TypeError:
+            log.debug("_get_alias(): string not in aliases, raising IDNotFoundError")
+            raise IDNotFoundError
+
+    def _set_alias(self, userid, alias):
+        try:
+            test = self.db_cur.execute("SELECT aliases FROM Aliases WHERE userid=(?)",
+                (userid,))
+            aliases = test.fetchone()[0]
+            aliases = aliases + "," + str(alias.encode('utf-8')) #futureproof :P
+            self.db_cur.execute("UPDATE Aliases SET aliases=(?) WHERE userid=(?)",
+                (aliases, userid))
+        except TypeError:
+            self.db_cur.execute("INSERT INTO aliases VALUES (?, ?)",
+                (userid, aliases))
 
     def _set_userid(self, user):
         """
@@ -176,15 +208,18 @@ class dbHandler(object):
     
     def _handle_lastfm(self, userid, user=None, args=None):
         """
-        The lastfm handler is a sort of demo implementation, since the backing
-        database table is about as simple as it gets. As such, this docstring 
-        will serve as a tutorial on how to write a handler, for further reference.
+        The lastfm handler is a sort of reference implementation, since the backing
+        database table is about as simple as it gets, but still pulls in a lot of 
+        features of this object. As such, this docstring will serve as a tutorial on 
+        how to write a handler, for further reference. 
+
         Every handler function must follow the naming convention _handle_<modulename>,
-        and must ask for three arguments: userid, user=None and args=None. userid is an integer
-        representing that user in the database, as discovered by _get_userid(). args 
-        is an optional argument, passed only by set(). user is also passed by set() just
-        in case you need it, if not, then don't use it. You can use the existence
-        of args to determine whether you need to execute getter or setter logic.
+        and must ask for three arguments: userid, user=None and args=None. userid is 
+        an integer representing that user in the database, as discovered by 
+        _get_userid(). args is an optional argument, passed only by set(). user is 
+        also passed in just in case you need it, if not, then don't use it. You
+        can use the existence of args to determine whether you need to execute getter
+        or setter logic.
 
         What you want to return for your getter and setter logic is entirely up to you.
         What I'll be demoing here is getting and setting a single value associated with 
@@ -202,7 +237,8 @@ class dbHandler(object):
                 log.debug("_handle_lastfm(): Found lastid as %s" % lastid)
                 return lastid
             except TypeError:
-                log.debug("_handle_lastfm(): Could not find lastid in DB")
+                log.debug("_handle_lastfm(): Could not find lastid in DB, setting alias")
+                self._set_alias(userid, user.split("!", 1)[0])
                 raise IDNotFoundError
         else:
             ## This is the setter logic
@@ -241,6 +277,7 @@ class dbHandler(object):
                     (userid,))
                 return userdata.fetchone()
             except TypeError:
+                self._set_alias(userid, user.split("!", 1)[0])
                 raise IDNotFoundError
         else:
             # This is the setter logic
@@ -274,11 +311,15 @@ class dbHandler(object):
         """
         if args is None:
             # This is the getter logic
-            userdata = self.db_cur.execute("SELECT location FROM weather WHERE userid=(?)",
-                (userid,))
-            return userdata.fetchone()[0]
+            if userid is not None:
+                userdata = self.db_cur.execute("SELECT location FROM weather WHERE userid=(?)",
+                    (userid,))
+                return userdata.fetchone()[0]
+            else:
+                self._set_alias(userid, user.split("!", 1)[0])
+                raise IDNotFoundError
         else:
-            pass
+            raise IDNotFoundError
         return
 
 class IDNotFoundError(Exception):
