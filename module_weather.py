@@ -95,7 +95,7 @@ def _parse_args(args):
             args.append(args[1])
             args[1] = 0
     else: # If no options were specified, set default units and forecast
-        args.append(0)
+        args.append(4)
         args.append("summary")
 
     return args
@@ -142,7 +142,7 @@ def command_weather(bot, user, channel, args):
     if args:
         args = args.split(":")
         args = _parse_args(args)
-        db_data = db.get("weather", args[0])
+        db_data = db.get("weather", args[0].strip())
         if db_data is not None:
             latlng = _get_latlng(db_data[1])
         else:
@@ -196,7 +196,7 @@ def command_weather(bot, user, channel, args):
     return
 
 def command_forecast(bot, user, channel, args):
-    """Gives you a forecast. Usage: .forecast location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified. :brief will PM you always."""
+    """Gives you a forecast. Usage: .forecast location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to both/summary if no unit/forecast is specified. :brief will PM you always."""
     API_URL = "https://api.forecast.io/forecast/%s/%s"
     settings = _import_yaml_data()
     nick = bot.factory.getNick(user)
@@ -205,7 +205,7 @@ def command_forecast(bot, user, channel, args):
     if args:
         args = args.split(":")
         args = _parse_args(args)
-        db_data = db.get("weather", args[0])
+        db_data = db.get("weather", args[0].strip())
         if db_data is not None:
             latlng = _get_latlng(db_data[1])
         else:
@@ -261,7 +261,7 @@ def command_forecast(bot, user, channel, args):
             bot.say(nick, line.encode('utf-8'))
 
 def _add_weather(bot, user, args):
-    """Sets your location. Usage: location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to us/summary if no unit/forecast is specified."""
+    """Sets your location. Usage: location:units:forecast, Units can be any one of us, si, ca, uk, or both. Forecast is either brief or summary. Defaults to both/summary if no unit/forecast is specified."""
 
     db = dbHandler(bot.factory.getDBPath())
 

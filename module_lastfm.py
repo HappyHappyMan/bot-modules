@@ -48,10 +48,10 @@ def command_np(bot, user, channel, args):
     log.debug("Querying database for lastid")
     if len(query_nick) > 0: # If they want somebody else's lfm info
         log.debug("Wanting lastid for %s" % query_nick)
-        lastid = db.get("lastfm", query_nick)
+        lastid = db.get("lastfm", query_nick.strip())
     else: # If they want their own
         log.debug("Wanting lastid for self, %s" % user)
-        lastid = db.get("lastfm", user)
+        lastid = db.get("lastfm", user.strip())
 
     log.debug("Found lastid %s in db" % lastid)
 
@@ -118,8 +118,8 @@ def command_compare(bot, user, channel, args):
     COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
 
     compare_nick = args.split(" ")[0].strip() # Ensure only one nick gets processed
-    lastid = db.get("lastfm", compare_nick)
-    yourid = db.get("lastfm", user)
+    lastid = db.get("lastfm", compare_nick.strip())
+    yourid = db.get("lastfm", user.strip())
 
 
     ## Handles the two possible ways a user couldn't exist to be compared with.
@@ -176,10 +176,10 @@ def command_charts(bot, user, channel, args):
     ## check on " "-tokenized args list.
     if len(args.split(" ")[0]) > 0:
         nick = args.split(" ")[0]
-        lastid = db.get("lastfm", nick)
+        lastid = db.get("lastfm", nick.strip())
     else:
         nick = bot.factory.getNick(user)
-        lastid = db.get("lastfm", user)
+        lastid = db.get("lastfm", user.strip())
 
     if lastid is None:
         bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % nick)
