@@ -1,4 +1,4 @@
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 import json
 import urllib
@@ -11,7 +11,7 @@ log = logging.getLogger('weather')
 # log.setLevel(20) # suppress debug output
 
 try:
-    import requests, yaml  
+    import requests, yaml
 except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
@@ -57,7 +57,7 @@ def _parse_forecast_output(weather_data, city_name, measure_type):
             minTemp_c = str(round((weather_data['daily']['data'][x]['temperatureMin'] - 32) * 5/9, 2))
             maxTemp_c = str(round((weather_data['daily']['data'][x]['temperatureMax'] - 32) * 5/9, 2))
 
-            buildstr =  "%s: %s%s High: %s%s (%s%s) Low: %s%s (%s%s)" % (date, icon, summary, maxTemp_f, u"°F", maxTemp_c, u"°C", minTemp_f, u"°F", minTemp_c, u"°C")         
+            buildstr =  "%s: %s%s High: %s%s (%s%s) Low: %s%s (%s%s)" % (date, icon, summary, maxTemp_f, u"°F", maxTemp_c, u"°C", minTemp_f, u"°F", minTemp_c, u"°C")
             forecast_list.append(buildstr)
 
         else:

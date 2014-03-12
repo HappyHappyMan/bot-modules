@@ -9,7 +9,8 @@ log = logging.getLogger('lastfm')
 # log.setLevel(20) # suppress debug output
 
 try:
-    import requests, yaml  
+    import requests
+    import yaml
 except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
@@ -24,6 +25,7 @@ def _import_yaml_data(directory=os.curdir):
             log.warning("Settings file for Last.fm not set up; please create a Last.fm API account and modify the example settings file.")
             return
 
+
 def _add_lastfm(bot, user, args):
     db = dbHandler(bot.factory.getDBPath())
     lastid = args.split(" ")[0].strip().lower()
@@ -33,6 +35,7 @@ def _add_lastfm(bot, user, args):
     bot.say(bot.factory.getNick(user), "Last.fm username set!")
     return
     pass
+
 
 def command_np(bot, user, channel, args):
     """Lastfm module! Usage: .np without arguments will return your now playing. .add lastfm "lastfm username" (no quotes) to add your username to the db."""
@@ -46,10 +49,10 @@ def command_np(bot, user, channel, args):
         bot.say(channel, 'Use .add lastfm "lastfm username" to add your lastfm to the db.')
         return
     log.debug("Querying database for lastid")
-    if len(query_nick) > 0: # If they want somebody else's lfm info
+    if len(query_nick) > 0:  # If they want somebody else's lfm info
         log.debug("Wanting lastid for %s" % query_nick)
         lastid = db.get("lastfm", query_nick.strip())
-    else: # If they want their own
+    else:  # If they want their own
         log.debug("Wanting lastid for self, %s" % user)
         lastid = db.get("lastfm", user.strip())
 
@@ -71,11 +74,11 @@ def command_np(bot, user, channel, args):
     xmlreturn = requests.get(call_url)
 
     if xmlreturn.status_code is not 200:
-        bot.say(channel, "Wow, looks like somebody didn't read the help text properly before adding their name to the db. Try again.")
+        # bot.say(channel, "Wow, looks like somebody didn't read the help text properly before adding their name to the db. Try again.")
+        return
 
     data = xmlreturn.content.encode('utf-8')
     tree = ET.fromstring(data)
-
 
     ## I do wish the etree library formatted everything into a dict like the json
     ## library does, then maybe this wouldn't seem like such a mess of magic
@@ -98,7 +101,7 @@ def command_np(bot, user, channel, args):
         artist = ""
 
     ## This will account for the nowplaying attribute lastfm returns, and format
-    ## the output string appropriately. 
+    ## the output string appropriately.
     if len(nowplaying) > 0:
         bot.say(channel, 'Last.fm \x034\x02|\x02\x03 \x02%s\x02 is listening to "%s" by %s%s \x034\x02|\x02\x03 http://www.last.fm/user/%s/now' %
                 (lastid.encode('utf-8'), track.encode('utf-8'), artist.encode('utf-8'), album.encode('utf-8'), lastid.encode('utf-8')))
@@ -117,10 +120,9 @@ def command_compare(bot, user, channel, args):
 
     COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
 
-    compare_nick = args.split(" ")[0].strip() # Ensure only one nick gets processed
+    compare_nick = args.split(" ")[0].strip()  # Ensure only one nick gets processed
     lastid = db.get("lastfm", compare_nick.strip())
     yourid = db.get("lastfm", user.strip())
-
 
     ## Handles the two possible ways a user couldn't exist to be compared with.
     if lastid is None:
@@ -138,10 +140,9 @@ def command_compare(bot, user, channel, args):
 
         ## A particularly innovative way to round the float they send back to two
         ## decimal places. Nobody tell past me about math.round().
-        number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100 
+        number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100
 
-
-        matches = int(tree[0][0][1].attrib['matches']) # extracts the common artists
+        matches = int(tree[0][0][1].attrib['matches'])  # extracts the common artists
         artistList = []
 
         ## Puts the top 4 common artists into a list.
@@ -151,7 +152,7 @@ def command_compare(bot, user, channel, args):
         else:
             for i in range(4):
                 artistList.append(tree[0][0][1][i][0].text)
-        
+
         simString = "Similar artists include: "
         ## Formats the common artist list slightly better than a map() would, by
         ## being smart enough to not add a comma to the last entry.
@@ -162,7 +163,8 @@ def command_compare(bot, user, channel, args):
                 simString = simString + artistList[r] + ", "
 
         bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users \x02%s\x02 and \x02%s\x02 have similarity %s%% \x034\x02|\x02\x03 %s" % 
-            (lastid.encode('utf-8'), yourid.encode('utf-8'), number, simString.encode('utf-8')))
+                (lastid.encode('utf-8'), yourid.encode('utf-8'), number,
+                 simString.encode('utf-8')))
         return
 
 
@@ -184,7 +186,6 @@ def command_charts(bot, user, channel, args):
     if lastid is None:
         bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % nick)
         return
-
 
     call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=5&period=7day" % ("user.gettopartists", str(lastid), settings["lastfm"]["key"])
     xmlreturn = requests.get(call_url)

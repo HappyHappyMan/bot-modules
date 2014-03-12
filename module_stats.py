@@ -32,7 +32,7 @@ def command_stats(bot, user, channel, args):
     """Returns your usage stats (as near as can be approximated from your ident)"""
     ## these account for widely shared idents and cloaks, which we account for further 
     ## on when actually formulating the query.
-    SPECIAL_IDENTS = ["~Mibbit", "~quassel", "~androirc", "~kiwiirc", "Mibbit"]
+    SPECIAL_IDENTS = ["~Mibbit", "~quassel", "~androirc", "~kiwiirc", "Mibbit", "androirc", "webchat"]
     SPECIAL_CLOAK = "user/"
 
     ## Disable on channels the database isn't set up for
