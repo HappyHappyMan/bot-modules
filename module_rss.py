@@ -21,6 +21,7 @@ import calendar
 import os
 import json
 import HTMLParser
+from time import sleep
 import logging
 import logging.handlers
 
@@ -33,7 +34,7 @@ log.setLevel(20)
 ## so you should be using it anyway. 
 try:
     import requests
-    from twisted.internet import task
+    from twisted.internet import threads
     import yaml
     init_ok = True
 except ImportError as e:
@@ -47,7 +48,9 @@ timestamp_dict = {}
 client = None
 
 def event_signedon(bot):
-    """Starts rotator, triggered when bot signs on to network"""
+    """
+    Starts rotator, triggered when bot signs on to network
+    """
 
     global timestamp_dict
     global client
@@ -86,11 +89,15 @@ def event_signedon(bot):
             timestamp_dict[channel][url] = current_time
 
     delay = settings['delay'] # This should be no less than 120, because reddit caches returns for two minutes.
-    l = task.LoopingCall(process_rss, bot) 
-    l.start(delay)
+    
+    ## WITNESS MY UGLY HACKERY
+    while True:
+        threads.deferToThread(process_rss, bot)
+        sleep(delay)
 
 def get_reddit_api(data, kind):
-    """Extracts relevant strings from data, and formats for output. Returns formatted
+    """
+    Extracts relevant strings from data, and formats for output. Returns formatted
     string.
     """
     if kind == "t1":
@@ -112,6 +119,9 @@ def get_reddit_api(data, kind):
     return result
 
 def process_rss(bot):
+    """
+    The main processing function that actually does the bulk of the work
+    """
     log.debug("RSS processing started")
 
     global timestamp_dict
