@@ -48,14 +48,14 @@ def command_ud(bot, user, channel, args):
         return
 
     ## Building the shortlink.
-    defId = definition.a['data-defid']
+    defId = definition.attrs[1][1]
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
     ## Build our definition.
     defText = definition.find(attrs={'class':'meaning'}).text
     defText = HTMLParser.HTMLParser().unescape(defText)
 
-    ## Magic numbers rule! Or in other words, truncate the definition so the total length 
+    ## Magic numbers! Or in other words, truncate the definition so the total length 
     ## of the say() is such that it can all fit on one line. 
     maxLen = 316
     textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText) ## so that everything fits in one msg
