@@ -657,3 +657,53 @@ def _handle_reddit_user_2(url):
     match = re.search(r"(?<=u/)[\w'_-]+", url)
 
     return _handle_reddit_user("http://www.reddit.com/user/%s" % match.group(0))
+
+def _handle_gfycat(url):
+    """*gfycat.com/*"""
+    match = re.search(r'(?<=gfycat.com/)[\w]+', url)
+
+    r = requests.get("http://gfycat.com/cajax/get/%s" % match.group(0))
+    j = json.loads(r.content.encode('utf-8'))
+
+    j = j['gfyItem']
+
+    views = j['views']
+    gifsize = float(j['gifSize'])
+    mp4size = float(j['mp4Size'])
+    nsfw = int(j['nsfw'])
+    subreddit = j['redditId']
+    username = j['userName']
+
+    if subreddit:
+        subredditstr = " \x037\x02|\x02\x03 http://reddit.com/%s" % subreddit
+    else:
+        subredditstr = ""
+
+    if nsfw is 1:
+        nsfwstr = " \x037\x02|\x02\x03 \x02NSFW\x02"
+    else:
+        nsfwstr = ""
+
+    reduction = round(gifsize / mp4size, 1)
+    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %sx smaller \x039\x02|\x02\x03 %s views%s" % (username, subredditstr, reduction, views, nsfwstr)
+
+    return returnstr
+
+def _handle_mediacrush(url):
+    """*mediacru.sh/*"""
+
+    match = re.search(r'(?<=mediacru.sh/)[\w]+', url)
+
+    r = requests.get("http://mediacru.sh/%s.json" % match.group(0))
+    j = json.loads(r.content.encode('utf-8'))
+
+    compression = j['compression']
+    has_audio = j['metadata']['has_audio']
+    if has_audio is True:
+        hasaudio_string = "Caution, has audio!"
+    else:
+        hasaudio_string = ""
+
+    returnstr = "Mediacrush \x039\x02|\x02\x03 %sx smaller \x039\x02|\x02\x03 %s" % (compression, hasaudio_string)
+
+    return returnstr
