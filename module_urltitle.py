@@ -675,19 +675,19 @@ def _handle_gfycat(url):
     username = j['userName']
 
     if subreddit:
-        subredditstr = " \x037\x02|\x02\x03 http://reddit.com/%s" % subreddit
+        subredditstr = " \x039\x02|\x02\x03 http://redd.it/%s" % subreddit
     else:
         subredditstr = ""
 
-    if nsfw is 1:
-        nsfwstr = " \x037\x02|\x02\x03 \x02NSFW\x02"
+    if nsfw == 1:
+        nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
     else:
         nsfwstr = ""
 
-    reduction = round(gifsize / mp4size, 1)
-    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %sx smaller \x039\x02|\x02\x03 %s views%s" % (username, subredditstr, reduction, views, nsfwstr)
+    reduction = str(round(gifsize / mp4size, 1)) + "×".decode('utf-8')
+    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s views%s" % (username, subredditstr, reduction, views, nsfwstr)
 
-    return returnstr
+    return returnstr.encode('utf-8')
 
 def _handle_mediacrush(url):
     """*mediacru.sh/*"""
@@ -697,13 +697,13 @@ def _handle_mediacrush(url):
     r = requests.get("http://mediacru.sh/%s.json" % match.group(0))
     j = json.loads(r.content.encode('utf-8'))
 
-    compression = j['compression']
+    compression = str(j['compression']) + "×".decode('utf-8')
     has_audio = j['metadata']['has_audio']
     if has_audio is True:
-        hasaudio_string = "Caution, has audio!"
+        hasaudio_string = " \x039\x02|\x02\x03 Caution, has audio!"
     else:
         hasaudio_string = ""
 
-    returnstr = "Mediacrush \x039\x02|\x02\x03 %sx smaller \x039\x02|\x02\x03 %s" % (compression, hasaudio_string)
+    returnstr = "Mediacrush \x039\x02|\x02\x03 %s smaller%s" % (compression, hasaudio_string)
 
-    return returnstr
+    return returnstr.encode('utf-8')
