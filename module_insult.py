@@ -7,7 +7,7 @@ Tumblr dictionary and logic shamelessly stolen from https://github.com/Lokaltog/
 import random
 import string
 
-def command_insult(bot, user, channel, args):
+def _tumblr_insult(args):
 
     tumblrDictionary = {
         'insult': [
@@ -295,10 +295,41 @@ def command_insult(bot, user, channel, args):
         else:
             choice = rand.choice(tumblrDictionary['sexualPrefixes']) + rand.choice(tumblrDictionary['sexualPostfixes'])
         buildstr = buildstr + choice + '-' + rand.choice(tumblrDictionary['marginalizedAdverb']) + ', '
-        
+
     buildstr = buildstr + rand.choice(tumblrDictionary['privilegedNoun']) + '-' + rand.choice(tumblrDictionary['privilegedAdverb']) + ' '
     buildstr = buildstr + rand.choice(tumblrDictionary['insultNoun']) + " " + rand.choice(tumblrDictionary['privilegedIsm']) + ' '
 
+    return buildstr.upper()
 
-    bot.say(channel, buildstr.upper())
+def _banal_insult(nick, args):
+    """Bringing back the old insults."""
+    import linecache
+
+    def file_len(fname):
+        with open(fname) as f:
+            for i, l in enumerate(f):
+                pass
+            return i+1
+
+    linecount = file_len("/home/sri/bots/testbot/modules/insults.txt")
+    insult_line = linecache.getline("/home/sri/bots/testbot/modules/insults.txt", random.randint(0, linecount))
+
+    return_line = str(args) + ", " + str(nick) + " would like you to know that " + str(insult_line)
+
+    return return_line
+
+
+def command_insult(bot, user, channel, args):
+    """Insults a person of your choice. Use with a complete and utter disregard for feelings and restraint."""
+    
+    # Quick and dirty functionality to have the bot randomly choose between insulting methods.
+    # I will replace this with a more generic solution when I have more time to devote to it.
+    rand = random.Random()
+
+    if rand.random() > 0.5:
+        retstr = _banal_insult(bot.factory.getNick(user), args)
+    else:
+        retstr = _tumblr_insult(args)
+
+    bot.say(channel, retstr)
     return
