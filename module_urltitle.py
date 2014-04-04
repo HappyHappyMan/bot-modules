@@ -81,6 +81,8 @@ def handle_url(bot, user, channel, url, msg):
     data = requests.get(url)
     try:
         bs = BeautifulSoup.BeautifulSoup(data.content.encode('utf-8'))
+    except UnicodeDecodeError:
+        return
     except UnicodeEncodeError:
         return
    
@@ -698,8 +700,8 @@ def _handle_mediacrush(url):
     j = json.loads(r.content.encode('utf-8'))
 
     compression = str(j['compression']) + "×".decode('utf-8')
-    has_audio = j['metadata']['has_audio']
-    if has_audio is True:
+
+    if j['metadata']['has_audio']:
         hasaudio_string = " \x039\x02|\x02\x03 Caution, has audio!"
     else:
         hasaudio_string = ""
