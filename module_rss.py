@@ -34,7 +34,7 @@ log.setLevel(20)
 ## so you should be using it anyway. 
 try:
     import requests
-    from twisted.internet import threads
+    from twisted.internet import task, defer
     import yaml
     init_ok = True
 except ImportError as e:
@@ -89,11 +89,8 @@ def event_signedon(bot):
             timestamp_dict[channel][url] = current_time
 
     delay = settings['delay'] # This should be no less than 120, because reddit caches returns for two minutes.
-    
-    ## WITNESS MY UGLY HACKERY
-    while True:
-        threads.deferToThread(process_rss, bot)
-        sleep(delay)
+    l = task.LoopingCall(process_rss, bot)
+    l.start(delay)
 
 def get_reddit_api(data, kind):
     """
@@ -126,6 +123,9 @@ def process_rss(bot):
 
     global timestamp_dict
     global client
+
+    ## Create Deferred
+    d = defer.Deferred()
 
     ## Initialize dicts and headers for later on. 
     settings = _import_yaml_data()
@@ -167,7 +167,7 @@ def process_rss(bot):
             if (feed.status_code != 200):
                 log.error(url + " returned " + str(feed.status_code) + " error. Aborting.")
                 break
-            
+
             ## This try may not need to be here, but it's there just in case something 
             ## goes wrong in the GET request and isn't dealt with properly.
             try:
@@ -240,7 +240,7 @@ def _import_yaml_data(directory=os.curdir):
     The standard _import_yaml_data() seen throughout the modules, but with the key 
     difference that this one doesn't look in the modules directory for its settings.
     This is to preserve per-bot differences even if the modules directory is symlinked,
-    like my current setup. 
+    like my current setup.
     """
     try:
         settings_path = os.path.join(directory, "rss.settings")
