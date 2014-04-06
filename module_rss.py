@@ -34,7 +34,7 @@ log.setLevel(20)
 ## so you should be using it anyway. 
 try:
     import requests
-    from twisted.internet import task, defer
+    from twisted.internet import task, reactor 
     import yaml
     init_ok = True
 except ImportError as e:
@@ -89,8 +89,12 @@ def event_signedon(bot):
             timestamp_dict[channel][url] = current_time
 
     delay = settings['delay'] # This should be no less than 120, because reddit caches returns for two minutes.
-    l = task.LoopingCall(process_rss, bot)
+    l = task.LoopingCall(process_rss_handler, bot)
     l.start(delay)
+
+def process_rss_handler(bot):
+    reactor.callInThread(process_rss, bot)
+    return
 
 def get_reddit_api(data, kind):
     """
@@ -119,13 +123,11 @@ def process_rss(bot):
     """
     The main processing function that actually does the bulk of the work
     """
-    log.debug("RSS processing started")
+    log.info("RSS processing started")
 
     global timestamp_dict
     global client
 
-    ## Create Deferred
-    d = defer.Deferred()
 
     ## Initialize dicts and headers for later on. 
     settings = _import_yaml_data()
