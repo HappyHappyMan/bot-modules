@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-import BeautifulSoup as bs
+import bs4
 import HTMLParser
 import logging
 
@@ -27,7 +27,7 @@ def command_ud(bot, user, channel, args):
 
     urlobj = requests.get(UD_URL % queryWord)
 
-    soup = bs.BeautifulSoup(urlobj.content.encode('utf-8'))
+    soup = bs4.BeautifulSoup(urlobj.content.encode('utf-8'), "lxml")
 
     defs = soup.findAll(attrs={'class':'box'})
 
@@ -48,7 +48,7 @@ def command_ud(bot, user, channel, args):
         return
 
     ## Building the shortlink.
-    defId = definition.attrs[1][1]
+    defId = definition.attrs['data-defid']
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
     ## Build our definition.

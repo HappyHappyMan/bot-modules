@@ -324,9 +324,7 @@ def command_insult(bot, user, channel, args):
     
     # Quick and dirty functionality to have the bot randomly choose between insulting methods.
     # I will replace this with a more generic solution when I have more time to devote to it.
-    rand = random.Random()
-
-    if rand.random() > 0.5:
+    if random.random() > 0.5:
         retstr = _banal_insult(bot.factory.getNick(user), args)
     else:
         retstr = _tumblr_insult(args)

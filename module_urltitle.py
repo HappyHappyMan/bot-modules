@@ -18,13 +18,13 @@ import requests
 import yaml
 import os
 import base64
-
+import HTMLParser
 
 from types import TupleType
 
-from util.BeautifulSoup import BeautifulStoneSoup
+#from util.BeautifulSoup import BeautifulStoneSoup
 #from util.BeautifulSoup import BeautifulSoup
-import BeautifulSoup
+from bs4 import BeautifulSoup
 
 log = logging.getLogger("urltitle")
 config = None
@@ -80,7 +80,7 @@ def handle_url(bot, user, channel, url, msg):
 
     data = requests.get(url)
     try:
-        bs = BeautifulSoup.BeautifulSoup(data.content.encode('utf-8'))
+        bs = BeautifulSoup(data.content.encode('utf-8'), "lxml")
     except UnicodeDecodeError:
         return
     except UnicodeEncodeError:
@@ -188,11 +188,10 @@ def _title(bot, channel, title, smart=False):
     if len(title) > 300:
         title = title[:300] + "..."
 
-    title = BeautifulStoneSoup(title, convertEntities=BeautifulStoneSoup.ALL_ENTITIES)
     log.info(title)
 
     if not info:
-        return bot.say(channel, "%s" % (title))
+        return bot.say(channel, "%s" % (title.encode('utf-8')))
     else:
         return bot.say(channel, "%s [%s]" % (title, info))
 
