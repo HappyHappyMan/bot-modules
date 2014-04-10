@@ -66,7 +66,8 @@ def get_reddit_api(data, kind):
 def command_reddit(bot, user, channel, args):
     """Give it a subreddit, it will give you the current top post in that subreddit."""
 
-    data = requests.get("http://www.reddit.com/r/%s/.json" % args.strip())
+    headers = {'User-Agent': 'Lazybot/Claire by /u/Happy_Man'}
+    data = requests.get("http://www.reddit.com/r/%s/.json" % args.strip(), headers=headers)
 
     if data.status_code == 403:
         bot.say(channel, "This subreddit is private. Sorry, I can't get in.")

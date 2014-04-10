@@ -29,7 +29,7 @@ def command_ud(bot, user, channel, args):
 
     soup = bs4.BeautifulSoup(urlobj.content.encode('utf-8'), "lxml")
 
-    defs = soup.findAll(attrs={'class':'box'})
+    defs = soup.findAll(attrs={'class':'inner'})
 
     ## Gentle reminders to some who tend to overuse the function. 
     numResults = len(defs)
@@ -48,11 +48,12 @@ def command_ud(bot, user, channel, args):
         return
 
     ## Building the shortlink.
-    defId = definition.attrs['data-defid']
+    log.debug(definition.attrs)
+    defId = definition.parent.attrs['data-defid']
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
     ## Build our definition.
-    defText = definition.find(attrs={'class':'meaning'}).text
+    defText = definition.find(attrs={'class':'meaning'}).text.strip()
     defText = HTMLParser.HTMLParser().unescape(defText)
 
     ## Magic numbers! Or in other words, truncate the definition so the total length 
@@ -71,7 +72,7 @@ def command_ud(bot, user, channel, args):
 
     returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum + 1, numResults, defText, shortlink)
 
-    usersplit = user.split('!', 1)[0]
+    usersplit = bot.factory.getNick(user)
     if channel == user:
         channel = usersplit
 
