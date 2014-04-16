@@ -50,7 +50,7 @@ def command_wa(bot, user, channel, args):
                 dym_list[x] = '"' + dym_list[x].strip() + '"'
             dym_str = ", ".join(map(str, dym_list[:-1])) + " or " # trying to be clever about using map(). It doesn't work
 
-        bot.say(channel, user.split('!', 1)[0] + ", did you mean %s%s? If so, try again with that specific query." % (dym_str, dym_list[-1]))
+        bot.say(channel, bot.factory.getNick(user) + ", did you mean %s%s? If so, try again with that specific query." % (dym_str, dym_list[-1]))
         return
 
     ## It also likes to return tips sometimes, so we helpfully pass them along to the person who invoked the command.

@@ -9,7 +9,7 @@ import logging
 log = logging.getLogger('google')
 
 try:
-    import requests, yaml  
+    import requests, yaml
 except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 

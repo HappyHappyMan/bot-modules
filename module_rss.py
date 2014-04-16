@@ -25,6 +25,7 @@ from time import sleep
 import logging
 import logging.handlers
 
+
 log = logging.getLogger('rss') 
 log.setLevel(20)
 

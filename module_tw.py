@@ -67,6 +67,8 @@ def _handle_tweet(username):
 
 
 def command_tw(bot, user, channel, args):
-    """ Gets the most recent tweet tweeted by a twitter tweeter
+    """
+    Gets the most recent tweet tweeted by a twitter tweeter
     """
     bot.say(channel, _handle_tweet(args).encode('utf-8'))
+    return
