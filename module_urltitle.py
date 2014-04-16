@@ -78,7 +78,25 @@ def handle_url(bot, user, channel, url, msg):
                 # handler found, abort
                 return _title(bot, channel, title, True)
 
+    # We first determine whether this bit of media is humongous or not.
+    # If it is, we have the bot output the content-type and size of the
+    # file and return. Else, we proceed with the HTML parsing.
+
     data = requests.get(url)
+    try:
+        regex = re.findall(r'video/*|audio/*|image/*', data.headers['content-type'])
+        if (len(regex) > 0):
+            log.info("Media content detected")
+            if 'content-type' in data.headers.keys():
+                contentType = data.headers['content-type']
+            else:
+                contentType = "Unknown"
+            size = int(data.headers['content-length']) / 1024000
+            return _title(bot, channel, "File size: %s MB - Content-Type: %s" % (size, contentType))
+    except KeyError:
+        log.warning("Unknown data type, ignoring as it is possible security risk")
+        return
+
     try:
         bs = BeautifulSoup(data.content.encode('utf-8'), "lxml")
     except UnicodeDecodeError:
@@ -290,8 +308,6 @@ def _handle_tweet(url):
     tweet_url = "https://api.twitter.com/1.1/statuses/show/%s.json"
 
     test = re.match("https?://w?w?w?\.?twitter\.com\/(\w+)/statuse?s?/(\d+)*", url)
-    print test.group(1)
-    print test.group(2)
     username = test.group(1)
 
     # Now to deal with all the ridiculous authentication stuff
@@ -301,31 +317,32 @@ def _handle_tweet(url):
     headers_lib['Authorization'] = "Basic " + base64_key
     headers_lib['Content-Type'] = "application/x-www-form-urlencoded;charset=UTF-8"
 
-    auth_request = urllib2.Request(auth_url, "grant_type=client_credentials", headers_lib)
-    auth_return = urllib2.urlopen(auth_request)
-    auth_dict = json.load(auth_return)
+    auth_return = requests.post(auth_url, "grant_type=client_credentials", headers=headers_lib)
+    auth_dict = json.loads(auth_return.content.encode('utf-8'))
 
     if auth_dict['token_type'] != "bearer":
+        log.error("token_type was not bearer, something went wrong. Look into it.")
         return
 
     #matches for unique tweet id string
     get_url = tweet_url % test.group(2)
     get_token = "Bearer " + auth_dict['access_token']
-    get_request = urllib2.Request(get_url)
-    get_request.add_header("Authorization", get_token)
-    twitapi = urllib2.urlopen(get_request)
-    print twitapi
+    token_headers_lib = {}
+    token_headers_lib["Authorization"] = get_token
+    twitapi = requests.get(get_url, headers=token_headers_lib)
 
     #loads into dict
-    json1 = json.load(twitapi)
+    json1 = json.loads(twitapi.content.encode('utf-8'))
 
     #reads dict
     ##You can modify the fields below or add any fields you want to the returned string
-    text = json1['text']
-    user = json1['user']['screen_name']
-    name = json1['user']['name']
-    tweet = "Tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s" % (name, user, text)
-
+    try:
+        text = json1['text']
+        user = json1['user']['screen_name']
+        name = json1['user']['name']
+        tweet = "Tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s" % (name, user, text)
+    except IndexError:
+        log.error("Something went wrong with the twitter url handler, look into it.")
     return tweet
 
 def _handle_tweet_2(url):
@@ -671,7 +688,6 @@ def _handle_gfycat(url):
     views = j['views']
     gifsize = float(j['gifSize'])
     mp4size = float(j['mp4Size'])
-    nsfw = int(j['nsfw'])
     subreddit = j['redditId']
     username = j['userName']
 
@@ -680,13 +696,13 @@ def _handle_gfycat(url):
     else:
         subredditstr = ""
 
-    if nsfw == 1:
-        nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
-    else:
-        nsfwstr = ""
+    #if nsfw == 1:
+    #    nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
+    #else:
+    #    nsfwstr = ""
 
     reduction = str(round(gifsize / mp4size, 1)) + "×".decode('utf-8')
-    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s views%s" % (username, subredditstr, reduction, views, nsfwstr)
+    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s views" % (username, subredditstr, reduction, views)
 
     return returnstr.encode('utf-8')
 
@@ -700,11 +716,53 @@ def _handle_mediacrush(url):
 
     compression = str(j['compression']) + "×".decode('utf-8')
 
-    if j['metadata']['has_audio']:
-        hasaudio_string = " \x039\x02|\x02\x03 Caution, has audio!"
-    else:
-        hasaudio_string = ""
+    if j['blob_type'] == "video":
+        length = j['metadata']['duration']
+        m, s = divmod(length, 60)
+        h, m = divmod(m, 60)
+        duration_str = "%d:%02d:%02d" % (h, m, s)
 
-    returnstr = "Mediacrush \x039\x02|\x02\x03 %s smaller%s" % (compression, hasaudio_string)
+        has_audio = j['metadata']['has_audio']
+        if has_audio:
+            audio_str = " \x039\x02|\x02\x03 Caution, has audio!" 
+        else:
+            audio_str = ""
 
-    return returnstr.encode('utf-8')
+        nsfw = j['flags']['nsfw']
+        if nsfw:
+            nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
+        else:
+            nsfwstr = ""
+
+        returnstr = "Mediacrush video \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s%s%s" % (compression, duration_str, audio_str, nsfwstr)
+    if j['blob_type'] == "audio":
+        try:
+            album = " from album " + j['metadata']['album']
+            artist = " by " + j['metadata']['artist']
+            title = j['metadata']['title']
+        except KeyError:
+            album = ""
+            artist = ""
+            title = ""
+
+        length = j['metadata']['duration']
+        m, s = divmod(length, 60)
+        h, m = divmod(m, 60)
+        duration_str = "%d:%02d:%02d" % (h, m, s)
+
+        if j['flags']['nsfw']:
+            nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02" 
+        else:
+            nsfwstr = ""
+
+        returnstr = "Mediacrush audio \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s%s%s \x039\x02|\x02\x03 %s%s" % (compression, title, artist, album, duration_str, nsfwstr)
+    elif j['blob_type'] == "image":
+        if j['flags']['nsfw']:
+            nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
+        else:
+            nsfwstr = ""
+
+        returnstr = "Mediacrush image \x039\x02|\x02\x03 %s smaller%s" % (compression, nsfwstr)
+
+    return returnstr
+
