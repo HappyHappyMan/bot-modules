@@ -85,14 +85,17 @@ def handle_url(bot, user, channel, url, msg):
     data = requests.get(url)
     try:
         regex = re.findall(r'video/*|audio/*|image/*', data.headers['content-type'])
-        if (len(regex) > 0):
-            log.info("Media content detected")
+        if (len(regex) > 0) and (int(data.headers['content-length']) > (5*1024000)):
+            log.debug("Media content detected")
             if 'content-type' in data.headers.keys():
                 contentType = data.headers['content-type']
             else:
                 contentType = "Unknown"
             size = int(data.headers['content-length']) / 1024000
             return _title(bot, channel, "File size: %s MB - Content-Type: %s" % (size, contentType))
+        else:
+            log.debug("Media content too small")
+            return
     except KeyError:
         log.warning("Unknown data type, ignoring as it is possible security risk")
         return
