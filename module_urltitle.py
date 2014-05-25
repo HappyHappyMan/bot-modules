@@ -69,6 +69,20 @@ def handle_url(bot, user, channel, url, msg):
 
     handlers = [(h, ref) for h, ref in globals().items() if h.startswith("_handle_")]
 
+    # We first determine whether this bit of media is humongous or not.
+    # If it is, we have the bot output the content-type and size of the
+    # file and return. Else, we proceed with the HTML parsing.
+
+    data = requests.get(url)
+    try:
+        regex = re.findall(r'video/*|audio/*|image/*', data.headers['content-type'])
+        if (len(regex) > 0):
+            log.info("This is media content, deferring to other handler")
+            return
+    except KeyError:
+        log.warning("Unknown data type, ignoring as it is possible security risk")
+        return
+
     # try to find a specific handler for the URL
     for handler, ref in handlers:
         pattern = ref.__doc__.split()[0]
@@ -77,28 +91,6 @@ def handle_url(bot, user, channel, url, msg):
             if title:
                 # handler found, abort
                 return _title(bot, channel, title, True)
-
-    # We first determine whether this bit of media is humongous or not.
-    # If it is, we have the bot output the content-type and size of the
-    # file and return. Else, we proceed with the HTML parsing.
-
-    data = requests.get(url)
-    try:
-        regex = re.findall(r'video/*|audio/*|image/*', data.headers['content-type'])
-        if (len(regex) > 0) and (int(data.headers['content-length']) > (5*1024000)):
-            log.debug("Media content detected")
-            if 'content-type' in data.headers.keys():
-                contentType = data.headers['content-type']
-            else:
-                contentType = "Unknown"
-            size = int(data.headers['content-length']) / 1024000
-            return _title(bot, channel, "File size: %s MB - Content-Type: %s" % (size, contentType))
-        else:
-            log.debug("Media content too small")
-            return
-    except KeyError:
-        log.warning("Unknown data type, ignoring as it is possible security risk")
-        return
 
     try:
         bs = BeautifulSoup(data.content.encode('utf-8'), "lxml")
