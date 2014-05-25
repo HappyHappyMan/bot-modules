@@ -14,7 +14,7 @@ except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
 GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s"
-SHORTENER_URL = "http://v.gd/create.php?format=json&url=%s"
+SHORTENER_URL = "http://api.waa.ai/?url=%s&response=json"
 GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
 
 
@@ -27,7 +27,7 @@ def _import_yaml_data(directory=os.curdir):
             return
 
 
-def _googling(args):
+def _googling(args, is_google):
     settings = _import_yaml_data()
     args = args.decode('utf-8')
     request = requests.get(GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore'))))
@@ -35,17 +35,18 @@ def _googling(args):
     result = {}
     result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
     result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
-    result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
-    shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
-    shortData = json.loads(shortReq.content.encode('utf-8'))
-    result["shortURL"] = shortData['shorturl'].encode('utf-8')
+    if is_google:
+        result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
+        shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
+        shortData = json.loads(shortReq.content.encode('utf-8'))
+        result["shortURL"] = shortData['shortURL'].encode('utf-8')
 
     return result
 
 
 def command_google(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
-    result_dict = _googling(args)
+    result_dict = _googling(args, True)
 
     str_len = 300
     text_len = 41 + sum([len(result_dict[item]) for item in result_dict])
@@ -74,7 +75,7 @@ def command_g(bot, user, channel, args):
 
 def command_lucky(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
-    result_dict = _googling(args)
+    result_dict = _googling(args, False)
 
     if channel == user:
         channel = usersplit
