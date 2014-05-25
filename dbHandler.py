@@ -4,6 +4,8 @@ import logging
 log = logging.getLogger("dbHandler")
 # log.setLevel(20) # suppress debug output
 
+CLOAK_LIST = ["users.quakenet.org", "user/"]
+
 class dbHandler(object):
     """handles database connections for modules."""
 
@@ -55,21 +57,26 @@ class dbHandler(object):
             handler_method(userid, user, args)
             self.db_conn.commit()
 
-    def _search(self, nick):
+    def _search(self, column, query):
         """
-        Searches the Users table for the userid matching the nick param.
-        Returns None if the nick can't be matched.
+        Executes the query. Returns None if nothing is matched. 
         """
-        log.debug("_search(): looking for nick " + nick)
-        result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?", 
-            (nick,))
+        log.debug("_search(): looking for string %s in column %s " % (query, column))
+        result = self.db_cur.execute("SELECT userid FROM Users WHERE %s LIKE ?" % (column), 
+            (query,))
         try:
             uid = result.fetchone()[0]
-            log.debug("_search(): userid for nick %s found as %s" % (nick, uid))
+            log.debug("_search(): userid for nick %s found as %s" % (query, uid))
             return uid
         except TypeError:
-            log.debug("_search(): userid for nick %s not found" % nick)
+            log.debug("_search(): userid for nick %s not found" % query)
             return None
+
+    def _search_nick(self, query):
+        return self._search("nick", query)
+
+    def _search_cloak(self, query):
+        return self._search("host", query)
 
     def _get_userid(self, user):
         """
@@ -106,71 +113,76 @@ class dbHandler(object):
             nick = user.split("!", 1)[0]
 
             log.debug("_get_userid(): passing control to _search()")
-            search_userid = self._search(nick)
+            search_userid = self._search_nick(nick)
             log.debug("_get_userid(): Control returned from _search()")
             if search_userid is not None:
                 return search_userid
             else:
+                host = user.split("@", 1)[1]
+                if any(cloak in host for cloak in CLOAK_LIST):
+                    search_userid = self._search_cloak(host)
+                    if search_userid is not None:
+                        return search_userid
+            try:
+                result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?",
+                    (nick,))
+                uid = result.fetchone()[0]
+                log.debug("_get_userid(): 1")
                 try:
-                    result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?",
-                        (nick,))
+                    ident = user.split("!", 1)[1].split("@", 1)[0]
+                    result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
+                        (ident,))
                     uid = result.fetchone()[0]
-                    log.debug("_get_userid(): 1")
+                    log.debug("_get_userid(): 11")
+                    return uid
+                except TypeError:
+                    log.debug("_get_userid(): 10")
+                    raise IDNotFoundError
+            except TypeError:
+                try:
+                    ident = user.split("!", 1)[1].split("@", 1)[0]
                     try:
-                        ident = user.split("!", 1)[1].split("@", 1)[0]
+                        log.debug("_get_userid(): 01")
                         result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
                             (ident,))
-                        uid = result.fetchone()[0]
-                        log.debug("_get_userid(): 11")
-                        return uid
-                    except TypeError:
-                        log.debug("_get_userid(): 10")
-                        raise IDNotFoundError
-                except TypeError:
-                    try:
-                        ident = user.split("!", 1)[1].split("@", 1)[0]
+                        uid = result.fetchone()[0] 
                         try:
-                            log.debug("_get_userid(): 01")
-                            result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
-                                (ident,))
-                            uid = result.fetchone()[0] 
-                            try:
-                                log.debug("_get_userid(): 011")
-                                host = user.split("@", 1)[1]
-                                result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
-                                    (host,))
-                                uid = result.fetchone()[0]
-                                self._set_alias(uid, user.split("!", 1)[0])
-                                return uid
-                            except TypeError:
-                                log.debug("_get_userid(): 010")
-                                raise IDNotFoundError
-                        except TypeError:
-                            log.debug("_get_userid(): 00")
-                            raise IDNotFoundError
-                    except IndexError:
-                        log.debug("_get_userid(): ident not found, we didn't get a full userstring.")
-                        try:
-                            log.debug("_get_userid(): Searching host")
+                            log.debug("_get_userid(): 011")
+                            host = user.split("@", 1)[1]
                             result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
-                                ("%" + nick + "%",))
+                                (host,))
                             uid = result.fetchone()[0]
+                            self._set_alias(uid, user.split("!", 1)[0])
                             return uid
                         except TypeError:
+                            log.debug("_get_userid(): 010")
+                            raise IDNotFoundError
+                    except TypeError:
+                        log.debug("_get_userid(): 00")
+                        raise IDNotFoundError
+                except IndexError:
+                    log.debug("_get_userid(): ident not found, we didn't get a full userstring.")
+                    try:
+                        log.debug("_get_userid(): Searching host")
+                        result = self.db_cur.execute("SELECT userid FROM Users WHERE host LIKE ?",
+                            ("%" + nick + "%",))
+                        uid = result.fetchone()[0]
+                        return uid
+                    except TypeError:
+                        try:
+                            log.debug("_get_userid(): Did not find matching host, checking ident")
+                            result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
+                                ("%" + nick + "%",))
+                            return result.fetchone()[0]
+                        except TypeError:
+                            log.debug("_get_userid(): No match, searching aliases")
                             try:
-                                log.debug("_get_userid(): Did not find matching host, checking ident")
-                                result = self.db_cur.execute("SELECT userid FROM Users WHERE ident LIKE ?",
-                                    ("%" + nick + "%",))
-                                return result.fetchone()[0]
-                            except TypeError:
-                                log.debug("_get_userid(): No match, searching aliases")
-                                try:
-                                    uid = self._get_alias(nick)
-                                    log.debug("_get_userid(): Found uid is " + str(uid))
-                                    return uid
-                                except IDNotFoundError:
-                                    log.debug("_get_userid(): Raising IDNotFoundError, last hope was no good")
-                                    raise IDNotFoundError
+                                uid = self._get_alias(nick)
+                                log.debug("_get_userid(): Found uid is " + str(uid))
+                                return uid
+                            except IDNotFoundError:
+                                log.debug("_get_userid(): Raising IDNotFoundError, last hope was no good")
+                                raise IDNotFoundError
         return
 
     def _get_alias(self, searchstr):
