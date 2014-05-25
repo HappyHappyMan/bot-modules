@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import random
-import BeautifulSoup
 import requests
-import json
 import logging
 
 log = logging.getLogger('misc')
 
 def command_roll(bot, user, channel, args):
     """rolls dice. Usage: .roll xdy where x is the number of dice and y is the number of sides on each die"""
+    import random
     nick = user.split('!', 1)[0]
     try:
         index = args.index('d')
@@ -39,6 +37,8 @@ def command_roll(bot, user, channel, args):
 
 def command_changelog(bot, user, channel, args):
     """Changelog!"""
+    import json
+
     log.debug(args)
     log.debug(type(args))
     try:
@@ -61,6 +61,8 @@ def command_changelog(bot, user, channel, args):
 
 def command_isup(bot, user, channel, args):
     """Give it a url, it will tell you if it's up or not."""
+    import BeautifulSoup
+
     nick = user.split("!", 1)[0]
     args = args.split(" ",)[0]
     isup = requests.get("http://isup.me/%s" % args)
@@ -94,7 +96,9 @@ def command_btc(bot, user, channel, args):
     bot.say(channel, "1 btc is worth %s %s" % (rate.encode('utf-8'), conv[-3:]))
 
 def command_doge(bot, user, channel, args):
+    import json
     data = requests.get("https://www.dogeapi.com/wow/?a=get_current_price&amount_doge=1")
-    
-    bot.say(channel, "1 dogecoin is worth %s USD." % data.content)
+    j = json.loads(str(data.content))
+    amount = j['data']['amount']
+    bot.say(channel, "1 dogecoin is worth %s USD." % amount)
     return
