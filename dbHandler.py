@@ -118,11 +118,14 @@ class dbHandler(object):
             if search_userid is not None:
                 return search_userid
             else:
-                host = user.split("@", 1)[1]
-                if any(cloak in host for cloak in CLOAK_LIST):
-                    search_userid = self._search_cloak(host)
-                    if search_userid is not None:
-                        return search_userid
+                try:
+                    host = user.split("@", 1)[1]
+                    if any(cloak in host for cloak in CLOAK_LIST):
+                        search_userid = self._search_cloak(host)
+                        if search_userid is not None:
+                            return search_userid
+                except IndexError:
+                    pass
             try:
                 result = self.db_cur.execute("SELECT userid FROM Users WHERE nick LIKE ?",
                     (nick,))
