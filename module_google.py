@@ -26,6 +26,12 @@ def _import_yaml_data(directory=os.curdir):
             log.warning("Settings file for Google not set up; please create a Google API account and modify the example settings file.")
             return
 
+class GoogleError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
 
 def _googling(args, is_google):
     settings = _import_yaml_data()
@@ -33,20 +39,27 @@ def _googling(args, is_google):
     request = requests.get(GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore'))))
     json1 = json.loads(request.content.encode('utf-8'))
     result = {}
-    result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
-    result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
-    if is_google:
-        result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
-        shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
-        shortData = json.loads(shortReq.content.encode('utf-8'))
-        result["shortURL"] = shortData['shortURL'].encode('utf-8')
+    try:
+        result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
+        result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
+        if is_google:
+            result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
+            shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
+            shortData = json.loads(shortReq.content.encode('utf-8'))
+            result["shortURL"] = shortData['shortURL'].encode('utf-8')
 
-    return result
+        return result
+    except KeyError:
+        raise GoogleError('No results found')
 
 
 def command_google(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
-    result_dict = _googling(args, True)
+    try:
+        result_dict = _googling(args, True)
+    except GoogleError:
+        bot.say("No results found.")
+        return
 
     str_len = 300
     text_len = 41 + sum([len(result_dict[item]) for item in result_dict])
@@ -75,7 +88,11 @@ def command_g(bot, user, channel, args):
 
 def command_lucky(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
-    result_dict = _googling(args, False)
+    try:
+        result_dict = _googling(args, False)
+    except GoogleError:
+        bot.say("No results found.")
+        return
 
     if channel == user:
         channel = usersplit

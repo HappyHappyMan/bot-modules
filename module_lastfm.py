@@ -71,7 +71,12 @@ def command_np(bot, user, channel, args):
     ## for the API call. Time to go get it.
     log.debug("Calling API for lastid %s now" % lastid)
     call_url = API_URL % ("user.getrecenttracks", str(lastid), settings["lastfm"]["key"])
-    xmlreturn = requests.get(call_url)
+    try:
+        xmlreturn = requests.get(call_url)
+    except requests.exceptions.ConnectionError:
+        log.error("Max retries exceeded, notify user to try again in a couple seconds")
+        bot.say(channel, "Last.fm didn't respond. Try again in a few seconds.")
+        return
 
     if xmlreturn.status_code is not 200:
         # bot.say(channel, "Wow, looks like somebody didn't read the help text properly before adding their name to the db. Try again.")

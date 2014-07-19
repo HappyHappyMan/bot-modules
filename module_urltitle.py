@@ -98,12 +98,13 @@ def handle_url(bot, user, channel, url, msg):
         return
     except UnicodeEncodeError:
         return
-   
-    title = bs.title.text
+
 
     # no title attribute
-    if not title:
+    if not bs.title:
         return
+
+    title = bs.title.text
 
     try:
         # remove trailing spaces, newlines, linefeeds and tabs
@@ -456,26 +457,6 @@ def _handle_salakuunneltua(url):
     return None
 
 
-def _handle_facebook(url):
-    """*facebook.com/*"""
-    if not has_json: return
-    if re.match("http(s?)://(.*?)facebook\.com/(.*?)id=(\\d+)", url):
-        asd = urlparse.urlparse(url)
-        id = asd.query.split('id=')[1].split('&')[0]
-        if id != '':
-            url = "https://graph.facebook.com/%s" % id
-            content = getUrl(url, True).getContent()
-            if content != 'false':
-                data = json.loads(content)
-                try:
-                    title = data['name']
-                except:
-                    return
-            else:
-                title = 'Private url'
-    else:
-        return
-    return title
 
 
 def _handle_vimeo(url):
@@ -606,12 +587,15 @@ def _handle_reddit(url):
     content_request = urllib2.Request(json_url, None, headers_lib)
     content = urllib2.urlopen(content_request)
     api_return = json.load(content)
+    return _handle_reddit_content(api_return[0])
 
+
+def _handle_reddit_content(content):
     if not content:
-        log.debug("No content received")
-        return
+        log.error("No content received")
+        return "No content received from Reddit API."
     try:
-        data = api_return[0]['data']['children'][0]['data']
+        data = content['data']['children'][0]['data']
         title = data['title']
         ups = data['ups']
         downs = data['downs']
@@ -644,8 +628,7 @@ def _handle_reddit_2(url):
     content = urllib2.urlopen(content_request)
     api_return = json.load(content)
 
-    full_url = api_return['data']['children'][0]['data']['permalink']
-    return _handle_reddit("http://www.reddit.com" + full_url)
+    return _handle_reddit_content(full_url)
 
 def _handle_reddit_user(url):
     """*reddit.com/user/*"""
@@ -704,18 +687,25 @@ def _handle_gfycat(url):
 def _handle_mediacrush(url):
     """*mediacru.sh/*"""
 
-    match = re.search(r'(?<=mediacru.sh/)[\w]+', url)
+    match = re.search(r'(?<=mediacru.sh/)[\w_-]+', url)
 
     r = requests.get("http://mediacru.sh/%s.json" % match.group(0))
     j = json.loads(r.content.encode('utf-8'))
 
-    compression = str(j['compression']) + "×".decode('utf-8')
+    try:
+        compression = str(j['compression']) + "×".decode('utf-8')
+    except KeyError:
+        compression = ""
 
-    if j['blob_type'] == "video":
-        length = j['metadata']['duration']
-        m, s = divmod(length, 60)
-        h, m = divmod(m, 60)
-        duration_str = "%d:%02d:%02d" % (h, m, s)
+    if j['type'] == "application/album":
+        album_len = len(j['files'])
+        returnstr = "Mediacrush album \x03\x02|\x02\x03 %s files" % album_len
+
+    elif j['blob_type'] == "video":
+        # length = j['metadata']['duration']
+        # m, s = divmod(length, 60)
+        # h, m = divmod(m, 60)
+        # duration_str = "%d:%02d:%02d" % (h, m, s)
 
         has_audio = j['metadata']['has_audio']
         if has_audio:
@@ -729,8 +719,8 @@ def _handle_mediacrush(url):
         else:
             nsfwstr = ""
 
-        returnstr = "Mediacrush video \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s%s%s" % (compression, duration_str, audio_str, nsfwstr)
-    if j['blob_type'] == "audio":
+        returnstr = "Mediacrush video \x039\x02|\x02\x03 %s%s" % (audio_str, nsfwstr)
+    elif j['blob_type'] == "audio":
         try:
             album = " from album " + j['metadata']['album']
             artist = " by " + j['metadata']['artist']
