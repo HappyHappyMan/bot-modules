@@ -15,8 +15,10 @@ except ImportError as e:
 UD_URL = "http://www.urbandictionary.com/define.php?term=%s"
 
 def command_ud(bot, user, channel, args):
-    """.ud word def#. ie, to get the second definition for the word Google, you'd type .ud Google 2. Defaults to the first definition, if no number is given."""
+    """.ud word def:#. ie, to get the second definition for the word Google, you'd type .ud Google:2. Defaults to the first definition, if no number is given."""
     queryWord = args.split(":")[0].replace(" ", "+")
+    if channel == user:
+        channel = bot.factory.getNick(user)
 
     try:
         defNum = int(args.split(":")[1]) - 1
@@ -59,7 +61,7 @@ def command_ud(bot, user, channel, args):
     ## Magic numbers! Or in other words, truncate the definition so the total length 
     ## of the say() is such that it can all fit on one line. 
     maxLen = 316
-    textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText) ## so that everything fits in one msg
+    textLen = 17 + len(queryWord) + 23 + 7 + len(shortlink) + 3 + len(defText)
     if textLen > maxLen:
         truncLen = maxLen - (17 + len(queryWord) + 23 + 7 + len(shortlink) + 3)
         while True:
@@ -72,9 +74,6 @@ def command_ud(bot, user, channel, args):
 
     returnstr = "UD Definition of \x02%s\x02 (Definition %s of %s) \x02\x035|\x03\x02 %s \x02\x035|\x03\x02 %s" % (queryWord.strip("+").replace("+", " "), defNum + 1, numResults, defText, shortlink)
 
-    usersplit = bot.factory.getNick(user)
-    if channel == user:
-        channel = usersplit
 
     bot.say(channel, returnstr.encode('utf-8'))
 
