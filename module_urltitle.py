@@ -336,7 +336,8 @@ def _handle_tweet(url):
         text = json1['text']
         user = json1['user']['screen_name']
         name = json1['user']['name']
-        tweet = "Tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s" % (name, user, text)
+        time = json1['created_at']
+        tweet = "Tweet by \x02%s\x02 (\x02@%s\x02) \x02\x0310|\x03\x02 %s \x02\x0310|\x03\x02 %s" % (name, user, text, time)
     except IndexError:
         log.error("Something went wrong with the twitter url handler, look into it.")
     return tweet
@@ -597,17 +598,15 @@ def _handle_reddit_content(content):
     try:
         data = content['data']['children'][0]['data']
         title = data['title']
-        ups = data['ups']
-        downs = data['downs']
         subreddit = data['subreddit']
         if data['domain'][:4] == "self":
             link = ""
         else:
             link = "\x037\x02|\x02\x03 " + data['url']
-        score = ups - downs
+        score = data['score']
         num_comments = data['num_comments']
         over_18 = data['over_18']
-        result = "\x02r/%s\x02 \x037\x02|\x02\x03 %s - %d pts (%d up, %d down) \x037\x02|\x02\x03 %d comments %s" % (subreddit, title, score, ups, downs, num_comments, link)
+        result = "\x02r/%s\x02 \x037\x02|\x02\x03 %s - %d pts \x037\x02|\x02\x03 %d comments %s" % (subreddit, title, score, num_comments, link)
         if over_18 is True:
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
         return result
@@ -628,7 +627,7 @@ def _handle_reddit_2(url):
     content = urllib2.urlopen(content_request)
     api_return = json.load(content)
 
-    return _handle_reddit_content(full_url)
+    return _handle_reddit_content(api_return)
 
 def _handle_reddit_user(url):
     """*reddit.com/user/*"""

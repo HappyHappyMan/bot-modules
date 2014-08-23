@@ -35,7 +35,7 @@ def _import_yaml_data(directory=os.curdir):
         return
 
 
-def get_reddit_api(data, kind):
+def get_reddit_api(data, kind, time=None):
     """
     Extracts relevant strings from data, and formats for output. Returns formatted
     string.
@@ -57,17 +57,34 @@ def get_reddit_api(data, kind):
         short = "http://redd.it/" + data['name'][3:] # This skips the t3_ part of the name, and gets us only the ID for the shortlink
         link = "\x037\x02|\x02\x03 " + short
         over_18 = data['over_18']
-        result = "\x02Top post in r/%s\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s %s" % (subreddit, title, author, url, link)
+
+        if time:
+            if time == "all":
+                time_period = "of all time"
+            else:
+                time_period = "in the past %s" % (time)
+        else:
+            time_period = ""
+        result = "\x02Top post in r/%s %s\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s %s" % (subreddit, time_period, title, author, url, link)
+
         if over_18 is True:
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
     return result
 
 
 def command_reddit(bot, user, channel, args):
-    """Give it a subreddit, it will give you the current top post in that subreddit."""
+    """Give it a subreddit, it will give you the current top post in that subreddit. If you give it an argument, for example .reddit funny:{hour, day, week, month, year, all} it will give you the top post in the subreddit in that time period."""
 
     headers = {'User-Agent': 'Lazybot/Claire by /u/Happy_Man'}
-    data = requests.get("http://www.reddit.com/r/%s/.json" % args.strip(), headers=headers)
+
+    args = args.split(":", 1)
+
+    if args[1] in ["hour", "day", "week", "month", "year", "all"]:
+        request_url = "http://www.reddit.com/r/%s/top/.json?t=%s" % (args[0], args[1])
+    else:
+        request_url = "http://www.reddit.com/r/%s/.json"
+
+    data = requests.get(request_url, headers=headers)
 
     if data.status_code == 403:
         bot.say(channel, "This subreddit is private. Sorry, I can't get in.")
@@ -94,8 +111,10 @@ def command_reddit(bot, user, channel, args):
         # ???
         bot.say(channel, "This subreddit doesn't exist, sorry.")
         return
-
-    returnstr = get_reddit_api(topPost, "t3")
+    try:
+        returnstr = get_reddit_api(topPost, "t3", args[1])
+    except IndexError:
+        returnstr = get_reddit_api(topPost, "t3")
 
     bot.say(channel, returnstr.encode('utf-8'))
     return
