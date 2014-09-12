@@ -73,6 +73,8 @@ def command_isup(bot, user, channel, args):
 
     if "It's not just you" in soup.div.text:
         bot.say(channel, "%s seems to be down for everyone, %s." % (args, nick))
+    elif "interwho" in soup.div.text:
+        bot.say(channel, "%s: Enter a valid url you pansy-pants" % (nick))
     else:
         bot.say(channel, "It's just you, %s, %s is up from here." % (nick, args))
     return
