@@ -98,9 +98,14 @@ def command_btc(bot, user, channel, args):
     bot.say(channel, "1 btc is worth %s %s" % (rate.encode('utf-8'), conv[-3:]))
 
 def command_doge(bot, user, channel, args):
+    """This tells you how much a single dogecoin is worth in USD."""
     import json
-    data = requests.get("https://www.dogeapi.com/wow/?a=get_current_price&amount_doge=1")
-    j = json.loads(str(data.content))
-    amount = j['data']['amount']
+    data = requests.get("http://data.bter.com/api/1/ticker/doge_usd")
+    j = json.loads(str(data.content.encode('utf-8')))
+    if j['result'] == "true":
+        amount = j['last']
+    else:
+        bot.say(channel, "Try again later, something's wrong with the API.")
+        return
     bot.say(channel, "1 dogecoin is worth %s USD." % amount)
     return
