@@ -60,12 +60,12 @@ def get_reddit_api(data, kind, time=None):
 
         if time:
             if time == "all":
-                time_period = "of all time"
+                time_period = " of all time"
             else:
-                time_period = "in the past %s" % (time)
+                time_period = " in the past %s" % (time)
         else:
             time_period = ""
-        result = "\x02Top post in r/%s %s\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s %s" % (subreddit, time_period, title, author, url, link)
+        result = "\x02Top post in r/%s%s\x02 \x037\x02|\x02\x03 %s by \x02%s\x02 %s %s" % (subreddit, time_period, title, author, url, link)
 
         if over_18 is True:
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
@@ -79,10 +79,15 @@ def command_reddit(bot, user, channel, args):
 
     args = args.split(":", 1)
 
-    if args[1] in ["hour", "day", "week", "month", "year", "all"]:
-        request_url = "http://www.reddit.com/r/%s/top/.json?t=%s" % (args[0], args[1])
-    else:
-        request_url = "http://www.reddit.com/r/%s/.json"
+    try:
+        if args[1] in ["hour", "day", "week", "month", "year", "all"]:
+            request_url = "http://www.reddit.com/r/%s/top/.json?t=%s" % (args[0], args[1])
+            time_flag = True
+        else:
+            request_url = "http://www.reddit.com/r/%s/.json" % (args[0])
+            time_flag = False
+    except IndexError:
+        request_url = "http://www.reddit.com/r/%s/.json" % (args[0])
 
     data = requests.get(request_url, headers=headers)
 
@@ -111,9 +116,9 @@ def command_reddit(bot, user, channel, args):
         # ???
         bot.say(channel, "This subreddit doesn't exist, sorry.")
         return
-    try:
+    if time_flag:
         returnstr = get_reddit_api(topPost, "t3", args[1])
-    except IndexError:
+    else:
         returnstr = get_reddit_api(topPost, "t3")
 
     bot.say(channel, returnstr.encode('utf-8'))
