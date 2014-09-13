@@ -88,6 +88,7 @@ def command_reddit(bot, user, channel, args):
             time_flag = False
     except IndexError:
         request_url = "http://www.reddit.com/r/%s/.json" % (args[0])
+        time_flag = False
 
     data = requests.get(request_url, headers=headers)
 
