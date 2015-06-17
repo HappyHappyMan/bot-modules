@@ -32,7 +32,7 @@ def command_kpop(bot, user, channel, args):
 
     result = requests.get(request_url)
 
-    result_json = json.loads(result.content.encode('utf-8'))
+    result_json = json.loads(result.content)
 
     choice = random.choice(result_json['items'])
     vidId = choice['snippet']['resourceId']['videoId'].encode('utf-8')

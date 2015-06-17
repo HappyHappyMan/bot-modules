@@ -27,7 +27,7 @@ def _import_yaml_data(directory=os.curdir):
 def _get_latlng(city):
     city = urllib.quote(city)
     latlng = requests.get("https://maps.googleapis.com/maps/api/geocode/json?address=%s&sensor=false" % city)
-    latlng_data = json.loads(latlng.content.encode('utf-8'))
+    latlng_data = json.loads(latlng.content)
     lat = latlng_data['results'][0]['geometry']['location']['lat']
     lng = latlng_data['results'][0]['geometry']['location']['lng']
     name = latlng_data['results'][0]['formatted_address']
@@ -186,8 +186,8 @@ def command_weather(bot, user, channel, args):
         else:
             bot.say(channel, "You're not in the database! Set a location with .add weather <your location>.")
             return
-
-    weather_data = json.loads(data.content.encode('utf-8'))
+    print data.content
+    weather_data = json.loads(data.content)
 
     weather_string = _parse_weather_output(weather_data, latlng[1], measure_type)
 
@@ -243,7 +243,7 @@ def command_forecast(bot, user, channel, args):
 
     data = requests.get(API_URL % (settings["weather"]["key"], latlng[0]) + units)
 
-    weather_data = json.loads(data.content.encode('utf-8'))
+    weather_data = json.loads(data.content)
 
     city_name = latlng[1].encode('utf-8')
 

@@ -14,7 +14,7 @@ except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
 GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s"
-SHORTENER_URL = "http://api.waa.ai/?url=%s&response=json"
+SHORTENER_URL = "http://api.waa.ai/shorten?url=%s&response=json"
 GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
 
 
@@ -37,7 +37,7 @@ def _googling(args, is_google):
     settings = _import_yaml_data()
     args = args.decode('utf-8')
     request = requests.get(GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore'))))
-    json1 = json.loads(request.content.encode('utf-8'))
+    json1 = json.loads(request.content)
     result = {}
     try:
         result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
@@ -45,8 +45,8 @@ def _googling(args, is_google):
         if is_google:
             result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
             shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
-            shortData = json.loads(shortReq.content.encode('utf-8'))
-            result["shortURL"] = shortData['shortURL'].encode('utf-8')
+            shortData = json.loads(shortReq.content)
+            result["shortURL"] = shortData['data']['url'].encode('utf-8')
 
         return result
     except KeyError:
@@ -58,7 +58,7 @@ def command_google(bot, user, channel, args):
     try:
         result_dict = _googling(args, True)
     except GoogleError:
-        bot.say("No results found.")
+        bot.say(channel, "No results found.")
         return
 
     str_len = 300

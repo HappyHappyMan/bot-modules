@@ -82,7 +82,7 @@ def command_np(bot, user, channel, args):
         # bot.say(channel, "Wow, looks like somebody didn't read the help text properly before adding their name to the db. Try again.")
         return
 
-    data = xmlreturn.content.encode('utf-8')
+    data = xmlreturn.content
     tree = ET.fromstring(data)
 
     ## I do wish the etree library formatted everything into a dict like the json
@@ -140,7 +140,7 @@ def command_compare(bot, user, channel, args):
         import math  # Yeah, yeah, whatever
         call_url = COMPARE_URL % (lastid, yourid, settings["lastfm"]["key"])
         xmlreturn = requests.get(call_url)
-        data = xmlreturn.content.encode('utf-8')
+        data = xmlreturn.content
         tree = ET.fromstring(data)
 
         ## A particularly innovative way to round the float they send back to two
@@ -194,7 +194,7 @@ def command_charts(bot, user, channel, args):
 
     call_url = "http://ws.audioscrobbler.com/2.0/?method=%s&user=%s&api_key=%s&limit=5&period=7day" % ("user.gettopartists", str(lastid), settings["lastfm"]["key"])
     xmlreturn = requests.get(call_url)
-    data = xmlreturn.content.encode('utf-8')
+    data = xmlreturn.content
     tree = ET.fromstring(data)
 
     artistList = []

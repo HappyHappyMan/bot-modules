@@ -30,7 +30,7 @@ def command_wa(bot, user, channel, args):
     api_url = "http://api.wolframalpha.com/v2/query?input=%s&appid=%s"
 
     retdata = requests.get(api_url % (urllib.quote(args), settings['appid']))
-    data = retdata.content.encode('utf-8')
+    data = retdata.content
     root = ET.fromstring(data)
 
     ## WA returns a bunch of "did you mean" possibilities, this block outputs them 
