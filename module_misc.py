@@ -136,3 +136,13 @@ def command_8ball(bot, user, channel, args):
             ]
     bot.say(channel, "%s: %s" % (bot.factory.getNick(user), response_list[randint(0, len(response_list) - 1)]))
     return
+
+def command_horoscope(bot, user, channel, args):
+    import json
+    data = requests.get("http://widgets.fabulously40.com/horoscope.json?sign={}".format(args))
+    j = json.loads(data.content)
+
+    if "horoscope" in j.keys():
+        bot.say(channel, "{}: {}".format(bot.factory.getNick(user), j["horoscope"]["horoscope"].encode('utf-8')))
+    else:
+        bot.say(channel, "{}: Sign not found".format(bot.factory.getNick(user)))
