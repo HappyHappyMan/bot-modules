@@ -66,6 +66,9 @@ def command_qadd(bot, user, channel, args):
     bot.say(channel, "Quote %s successfully written" % line_number)
 
 
+def command_q(bot, user, channel, args):
+    return command_quote(bot, user, channel,args)
+
 def command_quote(bot, user, channel, args):
     """Returns a quote from the database. If you provide numeric argument, returns that number quote from the database. If you provide text arguments, searches db. If no arguments, returns random quote."""
 
