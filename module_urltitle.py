@@ -22,8 +22,6 @@ import HTMLParser
 
 from types import TupleType
 
-#from util.BeautifulSoup import BeautifulStoneSoup
-#from util.BeautifulSoup import BeautifulSoup
 from bs4 import BeautifulSoup
 
 log = logging.getLogger("urltitle")
@@ -86,6 +84,7 @@ def handle_url(bot, user, channel, url, msg):
     # try to find a specific handler for the URL
     for handler, ref in handlers:
         pattern = ref.__doc__.split()[0]
+        log.debug("Pattern is " + pattern)
         if fnmatch.fnmatch(url, pattern):
             title = ref(url)
             if title:
@@ -211,87 +210,12 @@ def _title(bot, channel, title, smart=False):
 
 
 # TODO: Some handlers does not have if not bs: return, but why do we even have this for every function
-def _handle_iltalehti(url):
-    """*iltalehti.fi*html"""
-    # Go as normal
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.first('title').string
-    # The first part is the actual story title, lose the rest
-    title = title.split("|")[0].strip()
-    return title
-
-
-def _handle_iltasanomat(url):
-    """*iltasanomat.fi*uutinen.asp*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.title.string.rsplit(" - ", 1)[0]
-    return title
-
-
-def _handle_keskisuomalainen_sahke(url):
-    """*keskisuomalainen.net*sahkeuutiset/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.first('p', {'class': 'jotsikko'})
-    if title:
-        title = title.next.strip()
-        return title
-
-
-def _handle_tietokone(url):
-    """http://www.tietokone.fi/uutta/uutinen.asp?news_id=*"""
-    bs = getUrl(url).getBS()
-    sub = bs.first('h5').string
-    main = bs.first('h2').string
-    return "%s - %s" % (main, sub)
-
-
-def _handle_itviikko(url):
-    """http://www.itviikko.fi/*/*/*/*/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    return bs.first("h1", "headline").string
-
-
-def _handle_kauppalehti(url):
-    """http://www.kauppalehti.fi/4/i/uutiset/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.fetch("h1")[1].string.strip("\n ")
-    return title
-
-
-def _handle_verkkokauppa(url):
-    """http://www.verkkokauppa.com/*/product/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    product = bs.first('h1', id='productName').string
-    price = bs.first('span', {'class': 'hintabig'}).string
-    return "%s | %s" % (product, price)
-
-
-def _handle_mol(url):
-    """http://www.mol.fi/paikat/Job.do?*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.first("div", {'class': 'otsikko'}).string
-    return title
-
-def _import_yaml_data(directory=os.curdir):
+def _import_yaml_data(directory=os.curdir, service="twitter"):
     if os.path.exists(directory):
-        settings_path = os.path.join(directory, "modules", "twitter.settings")
+        settings_path = os.path.join(directory, "modules", "{}.settings".format(service.lower()))
         return yaml.load(file(settings_path))
     else:
-        print "Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file."
+        log.error("Settings file for Twitter not set up; please create a Twitter API account and modify the example settings file.")
         return
 
 
@@ -314,7 +238,7 @@ def _handle_tweet(url):
     headers_lib['Content-Type'] = "application/x-www-form-urlencoded;charset=UTF-8"
 
     auth_return = requests.post(auth_url, "grant_type=client_credentials", headers=headers_lib)
-    auth_dict = json.loads(auth_return.content.encode('utf-8'))
+    auth_dict = json.loads(auth_return.content)
 
     if auth_dict['token_type'] != "bearer":
         log.error("token_type was not bearer, something went wrong. Look into it.")
@@ -328,7 +252,7 @@ def _handle_tweet(url):
     twitapi = requests.get(get_url, headers=token_headers_lib)
 
     #loads into dict
-    json1 = json.loads(twitapi.content.encode('utf-8'))
+    json1 = json.loads(twitapi.content)
 
     #reads dict
     ##You can modify the fields below or add any fields you want to the returned string
@@ -354,15 +278,6 @@ def _handle_tweet_4(url):
     """http*://www.twitter.com/*/statuses/*"""
     return _handle_tweet(url)
 
-
-def _handle_netanttila(url):
-    """http://www.netanttila.com/webapp/wcs/stores/servlet/ProductDisplay*"""
-    bs = getUrl(url).getBS()
-    itemname = bs.first("h1").string.replace("\n", "").replace("\r", "").replace("\t", "").strip()
-    price = bs.first("td", {'class': 'right highlight'}).string.split(" ")[0]
-    return "%s | %s EUR" % (itemname, price)
-
-
 def _handle_youtube_shorturl(url):
     """http*://youtu.be/*"""
     return _handle_youtube_gdata(url)
@@ -370,108 +285,75 @@ def _handle_youtube_shorturl(url):
 
 def _handle_youtube_gdata_new(url):
     """http*://youtube.com/watch#!v=*"""
-    return _handle_youtube_gdata(url)
+    return __handle_youtube_gdata(url)
 
 
 def _handle_youtube_gdata(url):
     """http*://*youtube.com/watch?*v=*"""
-    from datetime import timedelta
-    gdata_url = "http://gdata.youtube.com/feeds/api/videos/%s"
-
+    settings = _import_yaml_data(service="google")
+    log.info(settings)
+    gdata_url = "https://www.googleapis.com/youtube/v3/videos"
     match = re.match("https?://youtu.be/(.*)", url)
     if not match:
         match = re.match("https?://.*?youtube.com/watch\?.*?v=([^&]+)", url)
     if match:
-        infourl = gdata_url % match.group(1)
-        bs = getUrl(infourl, True).getBS()
+        log.debug("We've found a youtube url match")
+        params = {'id': match.group(1),
+                   'part': 'snippet,contentDetails,statistics',
+                   'fields': 'items(id,snippet,contentDetails,statistics)',
+                   'key': settings['google']['key']}
 
-        entry = bs.first("entry")
+        r = requests.get(gdata_url, params=params)
+        if not r.status_code == 200:
+            error = r.json().get('error')
+            if error:
+                error = '{}: {}'.format(error['code'], error['message'])
+            else:
+                error = r.status_code
+                log.warning('Youtube API error: {}'.format(error))
+                return
 
-        if not entry:
-            log.info("Video too recent, no info through API yet.")
-            return
+        items = r.json()['items']
+        if len(items) == 0: return
+        entry = items[0]
 
-        author = entry.author.next.string
-        # if an entry doesn't have a rating, the whole element is missing
-       # try:
-       #     rating = float(entry.first("gd:rating")['average'])
-       # except TypeError:
-       #     rating = 0.0
-
+        author = entry['snippet']['channelTitle']
         #stars = int(round(rating)) * "*"
-        statistics = entry.first("yt:statistics")
-        if statistics:
-            views = format(int(statistics['viewcount']), ",d")
-        else:
+        try:
+            views = "{:,}".format(int(entry['statistics']['viewCount']))
+        except KeyError:
             views = "no"
-        racy = entry.first("yt:racy")
-        media = entry.first("media:group")
-        title = media.first("media:title").string
-        secs = int(media.first("yt:duration")['seconds'])
+
+        rating = entry['contentDetails'].get('contentRating', None)
+        if rating:
+            rating = rating.get('ytRating', None)
+
+        if rating and rating == 'ytAgeRestricted':
+            racy = True
+        else:
+            racy = False
         
-        length = str(timedelta(seconds=secs))
+        title = entry['snippet']['title']
+        length = entry['contentDetails']['duration'][2:].lower()
+        
         if racy:
             adult = " \x034|\x03 \x02NSFW\x02"
         else:
             adult = ""
         return "%s \x034|\x03 uploaded by %s \x034|\x03 %s views%s \x034|\x03 %s" % (title, author, views, adult, length)
 
-def _handle_helmet(url):
-    """http://www.helmet.fi/record=*fin"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.find(attr={'class': 'bibInfoLabel'}, text='Teoksen nimi').next.next.next.next.string
-    return title
-
-
-def _handle_ircquotes(url):
-    """http://*ircquotes.fi/[?]*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    chan = bs.first("span", {'class': 'quotetitle'}).next.next.string
-    points = bs.first("span", {'class': 'points'}).next.string
-    firstline = bs.first("div", {'class': 'quote'}).next.string
-    title = "%s (%s): %s" % (chan, points, firstline)
-    return title
-
-
-def _handle_alko2(url):
-    """http://alko.fi/tuotteet/fi/*"""
-    return _handle_alko(url)
-
-
-def _handle_alko(url):
-    """http://www.alko.fi/tuotteet/fi/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    name = bs.find('span', {'class': 'tuote_otsikko'}).string
-    price = bs.find('span', {'class': 'tuote_hinta'}).string.split(" ")[0] + u"€"
-    drinktype = bs.find('span', {'class': 'tuote_tyyppi'}).next
-    return name + " - " + drinktype + " - " + price
-
-
-def _handle_salakuunneltua(url):
-    """*salakuunneltua.fi*"""
-    return None
-
-
-
-
-def _handle_vimeo(url):
-    """*vimeo.com/*"""
-    data_url = "http://vimeo.com/api/v2/video/%s.xml"
-    match = re.match("http://.*?vimeo.com/(\d+)", url)
-    if match:
-        infourl = data_url % match.group(1)
-        bs = getUrl(infourl, True).getBS()
-        title = bs.first("title").string
-        user = bs.first("user_name").string
-        likes = bs.first("stats_number_of_likes").string
-        plays = bs.first("stats_number_of_plays").string
-        return "%s by %s [%s likes, %s views]" % (title, user, likes, plays)
+#def _handle_vimeo(url):
+#    """*vimeo.com/*"""
+#    data_url = "http://vimeo.com/api/v2/video/%s.xml"
+#    match = re.match("http://.*?vimeo.com/(\d+)", url)
+#    if match:
+#        infourl = data_url % match.group(1)
+#        bs = getUrl(infourl, True).getBS()
+#        title = bs.first("title").string
+#        user = bs.first("user_name").string
+#        likes = bs.first("stats_number_of_likes").string
+#        plays = bs.first("stats_number_of_plays").string
+#        return "%s by %s [%s likes, %s views]" % (title, user, likes, plays)
 
 
 def _handle_stackoverflow(url):
@@ -495,88 +377,12 @@ def _handle_stackoverflow(url):
     except Exception, e:
         return "Json parsing failed %s" % e
 
-
-def _handle_hs(url):
-    """*hs.fi*artikkeli*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.title.string
-    title = title.split("-")[0].strip()
-    try:
-        # determine article age and warn if it is too old
-        from datetime import datetime
-        # handle updated news items of format, and get the latest update stamp
-        # 20.7.2010 8:02 | PÃ¤ivitetty: 20.7.2010 12:53
-        date = bs.first('p', {'class': 'date'}).next
-        # in case hs.fi changes the date format, don't crash on it
-        if date:
-            date = date.split("|")[0].strip()
-            article_date = datetime.strptime(date, "%d.%m.%Y %H:%M")
-            delta = datetime.now() - article_date
-
-            if delta.days > 365:
-                return title, "NOTE: Article is %d days old!" % delta.days
-            else:
-                return title
-        else:
-            return title
-    except Exception, e:
-        log.error("Error when parsing hs.fi: %s" % e)
-        return title
-
-
-def _handle_ksml(url):
-    """*ksml.fi/uutiset*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.title.string
-    title = title.split("-")[0].strip()
-    return title
-
-
-def _handle_mtv3(url):
-    """*mtv3.fi*"""
-    bs = getUrl(url).getBS()
-    title = bs.first("h1", "otsikko").next
-    return title
-
-
-def _handle_yle(url):
-    """http://*yle.fi/uutiset/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.title.string
-    title = title.split("|")[0].strip()
-    return title
-
-
-def _handle_varttifi(url):
-    """http://www.vartti.fi/artikkeli/*"""
-    bs = getUrl(url).getBS()
-    title = bs.first("h2").string
-    return title
-
-
-def _handle_aamulehti(url):
-    """http://www.aamulehti.fi/*"""
-    bs = getUrl(url).getBS()
-    if not bs:
-        return
-    title = bs.fetch("h1")[0].string
-    return title
-
-
 def _handle_apina(url):
     """http://apina.biz/*"""
     return None
 
-
 def _handle_reddit(url):
     """*reddit.com/r/*"""
-
     if url[-1] != "/":
         ending = "/.json"
     else:
@@ -587,11 +393,46 @@ def _handle_reddit(url):
     headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
     content_request = urllib2.Request(json_url, None, headers_lib)
     content = urllib2.urlopen(content_request)
-    api_return = json.load(content)
-    return _handle_reddit_content(api_return[0])
+    #TODO: Actually fix the url parsing to strip parameters
+    try:
+        api_return = json.load(content)
+    except ValueError:
+        return
+    ## logic to handle comments vs content
+    match = re.search(r'http.*reddit\.com\/r\/.*\/comments\/\w*\/.*\/(\w*)\/\.json', json_url)
+    if match:
+        return __handle_reddit_comment_permalink(api_return[1])
+    else:
+        return __handle_reddit_content(api_return[0])
+
+def __handle_reddit_comment_permalink(content):
+    if not content:
+        log.error("No content received from reddit API")
+        return "No content received from Reddit API."
+    body = content['data']['children'][0]['data']['body']
+    author = content['data']['children'][0]['data']['author']
+    score = content['data']['children'][0]['data']['score']
+    gilded = content['data']['children'][0]['data']['gilded']
+
+    maxLen = 316
+    truncLen = 316
+    ## 75 is a magic number corresponding to how many non-variable characetrs
+    ## there are in the string.
+    textLen = len(body) + len(author) + len(str(score)) + len(str(gilded)) + 75
+    if textLen > maxLen:
+        truncLen = maxLen - textLen
+        while True:
+            if body[trunclen] == " ":
+                break
+            else:
+                truncLen = truncLen - 1
+                continue
+    body = body[:truncLen] + "..."
+    result = '\x02Comment by /u/%s \x037|\x03\x02 "%s" \x02\x037|\x03\x02 Gilded %s times, %s upvotes' % (author, body, gilded, score)
+    return result
 
 
-def _handle_reddit_content(content):
+def __handle_reddit_content(content):
     if not content:
         log.error("No content received")
         return "No content received from Reddit API."
@@ -627,7 +468,7 @@ def _handle_reddit_2(url):
     content = urllib2.urlopen(content_request)
     api_return = json.load(content)
 
-    return _handle_reddit_content(api_return)
+    return __handle_reddit_content(api_return)
 
 def _handle_reddit_user(url):
     """*reddit.com/user/*"""
@@ -658,7 +499,7 @@ def _handle_gfycat(url):
     match = re.search(r'(?<=gfycat.com/)[\w]+', url)
 
     r = requests.get("http://gfycat.com/cajax/get/%s" % match.group(0))
-    j = json.loads(r.content.encode('utf-8'))
+    j = json.loads(r.content)
 
     j = j['gfyItem']
 
@@ -667,21 +508,22 @@ def _handle_gfycat(url):
     mp4size = float(j['mp4Size'])
     subreddit = j['redditId']
     username = j['userName']
+    nsfw = int(j['nsfw'])
 
     if subreddit:
         subredditstr = " \x039\x02|\x02\x03 http://redd.it/%s" % subreddit
     else:
         subredditstr = ""
 
-    #if nsfw == 1:
-    #    nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
-    #else:
-    #    nsfwstr = ""
+    if nsfw == 1:
+        nsfwstr = " \x039\x02|\x02\x03 \x02NSFW\x02"
+    else:
+        nsfwstr = ""
 
-    reduction = str(round(gifsize / mp4size, 1)) + "×".decode('utf-8')
-    returnstr = "Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s views" % (username, subredditstr, reduction, views)
+    reduction = str(round(gifsize / mp4size, 1)) + u"×" # trying this
+    returnstr = u"Gfycat by \x02%s\x02%s \x039\x02|\x02\x03 %s smaller \x039\x02|\x02\x03 %s views%s" % (username, subredditstr, reduction, views, nsfwstr)
 
-    return returnstr.encode('utf-8')
+    return returnstr
 
 def _handle_mediacrush(url):
     """*mediacru.sh/*"""
@@ -689,10 +531,10 @@ def _handle_mediacrush(url):
     match = re.search(r'(?<=mediacru.sh/)[\w_-]+', url)
 
     r = requests.get("http://mediacru.sh/%s.json" % match.group(0))
-    j = json.loads(r.content.encode('utf-8'))
+    j = json.loads(r.content)
 
     try:
-        compression = str(j['compression']) + "×".decode('utf-8')
+        compression = str(j['compression']) + u"×"
     except KeyError:
         compression = ""
 
