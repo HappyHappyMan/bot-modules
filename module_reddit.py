@@ -71,6 +71,55 @@ def get_reddit_api(data, kind, time=None):
             result = result + " \x037\x02|\x02\x03 \x02NSFW\x02"
     return result
 
+def _reddit_api_user(data):
+    data = json.loads(data)
+
+    if data['kind'] == "t2":
+        return _parse_t2(data)
+    elif data['kind'] == 'Listing':
+        return _parse_listing(data)
+    else:
+        return ""
+
+def _parse_t2(data):
+    data = data['data']
+    name = data['name']
+    comment_karma = data['comment_karma']
+    link_karma = data['link_karma']
+
+    return "%s | %s link karma, %s comment karma | http://reddit.com/u/%s" % (name, link_karma, comment_karma, name)
+
+def _parse_listing(data):
+    data = data['data']['children'][0]
+
+
+
+def command_user(bot, user, channel, args):
+    """Looks up reddit users and displays their information if available."""
+    headers = {'User-Agent': 'Lazybot/Claire by /u/Happy_Man'}
+
+    args = args.split(":", 1)
+
+    try:
+        if args[1] in ['comments', 'submitted']:
+            request_url = "http://www.reddit.com/user/%s/%s/.json" % (args[0], args[1])
+            if args[2] in ['hour', 'day', 'week', 'month', 'year', 'all']:
+                request_url = "http://www.reddit.com/user/%s/%s/.json?t=%s&sort=top&limit=1" % (args[0], args[1], args[2])
+        else:
+            request_url = "http://www.reddit.com/user/%s/about.json" % (args[0])
+    except IndexError:
+        request_url = "http://www.reddit.com/user/%s/about.json" % (args[0])
+
+    data = requests.get(request_url, headers=headers)
+
+    if data.status_code != 200:
+        bot.say(channel, "User information unavailable.")
+        return
+
+    parsed_data = _reddit_api_user(data.content)
+
+    bot.say(channel, parsed_data.encode('utf-8'))
+
 
 def command_reddit(bot, user, channel, args):
     """Give it a subreddit, it will give you the current top post in that subreddit. If you give it an argument, for example .reddit funny:{hour, day, week, month, year, all} it will give you the top post in the subreddit in that time period."""
@@ -102,7 +151,7 @@ def command_reddit(bot, user, channel, args):
     try:
         data = json.loads(data.content.encode('utf-8'))
     except ValueError:
-        bot.say(channel, "This subreddit doesn't exist, sorry.")
+        bot.say(channel, "This subreddit or user doesn't exist, sorry.")
         return
 
     try:
@@ -125,3 +174,5 @@ def command_reddit(bot, user, channel, args):
     bot.say(channel, returnstr.encode('utf-8'))
     return
 
+def command_r(bot, user, channel, args):
+    return command_reddit(bot, user, channel, args)
