@@ -29,9 +29,12 @@ def command_ud(bot, user, channel, args):
 
     urlobj = requests.get(UD_URL % queryWord)
 
-    soup = bs4.BeautifulSoup(urlobj.content.encode('utf-8'), "lxml")
+    try:
+        soup = bs4.BeautifulSoup(urlobj.content, 'html5lib') # prefer super fast method
+    except TypeError:
+        soup = bs4.BeautifulSoup(urlobj.content) # fallback to slower default
 
-    defs = soup.findAll(attrs={'class':'inner'})
+    defs = soup.findAll(attrs={'class':'def-panel'})
 
     ## Gentle reminders to some who tend to overuse the function. 
     numResults = len(defs)
@@ -51,7 +54,7 @@ def command_ud(bot, user, channel, args):
 
     ## Building the shortlink.
     log.debug(definition.attrs)
-    defId = definition.parent.attrs['data-defid']
+    defId = definition['data-defid']
     shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
 
     ## Build our definition.
