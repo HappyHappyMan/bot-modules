@@ -69,7 +69,6 @@ def command_stats(bot, user, channel, args):
     ## Of course, you'll also need to be using Quassel. But then, you read the disclaimer
     ## up top, I'm sure.
     if real_ident == "~HappyMan":
-        print "IS an admin"
         cursor.execute("SELECT COUNT(*) FROM backlog WHERE senderid=6 AND type=1")
         result = cursor.fetchall()
         conn.close()
