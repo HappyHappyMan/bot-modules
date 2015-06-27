@@ -186,7 +186,6 @@ def command_weather(bot, user, channel, args):
         else:
             bot.say(channel, "You're not in the database! Set a location with .add weather <your location>.")
             return
-    print data.content
     weather_data = json.loads(data.content)
 
     weather_string = _parse_weather_output(weather_data, latlng[1], measure_type)
