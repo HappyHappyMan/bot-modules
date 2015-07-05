@@ -5,6 +5,7 @@ import urllib
 import HTMLParser
 import os
 import logging
+import random
 
 log = logging.getLogger('google')
 
@@ -52,6 +53,23 @@ def _googling(args, is_google):
     except KeyError:
         raise GoogleError('No results found')
 
+def command_animate(bot, user, channel, args):
+    """Finds a gif for your query."""
+    settings = _import_yaml_data()
+    args = args.decode('utf-8')
+    
+    if args[:3] == "me ":
+        args = args[3:]
+
+    request_url = GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore')))
+    request_url = request_url + '&searchType=image&fileType=gif&hq=animate&fields=items(link)'
+
+    response = json.loads(requests.get(request_url).content)
+
+    if len(response['items']) > 0:
+        bot.say(channel, random.choice(response['items'])['link'].encode('utf-8'))
+    else:
+        bot.say(channel, "No results found.")
 
 def command_google(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
