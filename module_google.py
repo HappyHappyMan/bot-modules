@@ -66,7 +66,7 @@ def command_animate(bot, user, channel, args):
 
     response = json.loads(requests.get(request_url).content)
 
-    if len(response['items']) > 0:
+    if ('items' in response.keys() and len(response['items'])) > 0:
         bot.say(channel, random.choice(response['items'])['link'].encode('utf-8'))
     else:
         bot.say(channel, "No results found.")
