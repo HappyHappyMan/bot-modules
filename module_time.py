@@ -19,15 +19,15 @@ def command_time(bot, user, channel, args):
         place = db.get("time", args.split(" ", 1)[0])
         if place is not None:
             latlng_data = requests.get(LATLNG_URL % urllib.quote(place))
-            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
+            latlng_data = json.loads(latlng_data.content)
         else:
             latlng_data = requests.get(LATLNG_URL % urllib.quote(args))
-            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
+            latlng_data = json.loads(latlng_data.content)
     else:
         place = db.get("time", user)
         if place is not None:
             latlng_data = requests.get(LATLNG_URL % urllib.quote(place))
-            latlng_data = json.loads(latlng_data.content.encode('utf-8'))
+            latlng_data = json.loads(latlng_data.content)
         else:
             bot.say(channel, "Set your location using .weather add.")
             return
