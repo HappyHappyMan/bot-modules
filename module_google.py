@@ -53,6 +53,42 @@ def _googling(args, is_google):
     except KeyError:
         raise GoogleError('No results found')
 
+def command_yt(bot, user, channel, args):
+    """Searches youtube for your search. What else would it do?"""
+    settings = _import_yaml_data()
+    gdata_url = "https://www.googleapis.com/youtube/v3/search"
+
+    args = args.decode('utf-8')
+
+    params = {'part': 'snippet',
+                'q': args,
+                'key': settings['google']['key'],
+                'safesearch': 'none'}
+
+    r = requests.get(gdata_url, params=params)
+    if not r.status_code == 200:
+        error = r.json().get('error')
+        if error:
+            error = '{}: {}'.format(error['code'], error['message'])
+        else:
+            error = r.status_code
+        log.warning('Youtube API error: {}'.format(error))
+        return
+
+    items = r.json()['items']
+    if len(items) == 0:
+        bot.say(channel, "No results found.")
+        return
+    
+    entry = items[0]
+
+    title = entry['snippet']['title']
+    id = entry['id']['videoId']
+
+    bot.say(channel, '\x02YouTube search result\x02 \x034|\x03 {} \x034|\x03 https://youtube.com/watch?v={}'.format(
+        title, id))
+
+
 def command_gis(bot, user, channel, args):
     settings = _import_yaml_data()
     args = args.decode('utf-8')
