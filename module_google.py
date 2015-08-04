@@ -53,6 +53,20 @@ def _googling(args, is_google):
     except KeyError:
         raise GoogleError('No results found')
 
+def command_gis(bot, user, channel, args):
+    settings = _import_yaml_data()
+    args = args.decode('utf-8')
+
+    request_url = GOOGLE_URL % (settings['google']['key'], settings['google']['cx'], urllib.quote(args.encode('utf-8', 'ignore')))
+    request_url += '&searchType=image&fields=items(link)'
+
+    response = json.loads(requests.get(request_url).content)
+
+    if ('items' in response.keys() and len(response['items']) > 0):
+        bot.say(channel, response['items'][0]['link'].encode('utf-8'))
+    else:
+        bot.say(channel, "No results found.")
+
 def command_animate(bot, user, channel, args):
     """Finds a gif for your query."""
     settings = _import_yaml_data()
