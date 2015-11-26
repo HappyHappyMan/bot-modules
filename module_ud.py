@@ -36,14 +36,7 @@ def command_ud(bot, user, channel, args):
 
     defs = soup.findAll(attrs={'class':'def-panel'})
 
-    ## Gentle reminders to some who tend to overuse the function. 
     numResults = len(defs)
-    if numResults < 1:
-        if 'tripgod' in user.split('!', 1)[0]:
-            bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
-        else:
-            bot.say(channel, "Word not found.")
-        return
 
     ## Check that we don't try to get a definition that doesn't exist.
     try:
@@ -54,8 +47,17 @@ def command_ud(bot, user, channel, args):
 
     ## Building the shortlink.
     log.debug(definition.attrs)
-    defId = definition['data-defid']
-    shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
+    try:
+        defId = definition['data-defid']
+        shortlink = "http://%s.urbanup.com/%s" % (queryWord.strip("+").replace("+", "-"), defId)
+    except KeyError:
+        ## Gentle reminders to some who tend to overuse the function.
+        if 'tripgod' in user.split('!', 1)[0]:
+            bot.say(channel, "tripgod, have you perhaps tried GOOGLING SHIT FIRST?!")
+        else:
+            bot.say(channel, "Word not found.")
+        return
+
 
     ## Build our definition.
     defText = definition.find(attrs={'class':'meaning'}).text.strip()
