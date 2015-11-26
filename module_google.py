@@ -15,8 +15,8 @@ except ImportError as e:
     log.error("Error importing modules: %s" % e.strerror)
 
 GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s"
-SHORTENER_URL = "http://api.waa.ai/shorten?url=%s&response=json"
-GOOGLE_BASE_URL = "http://www.google.com/#output=search&q=%s"
+SHORTENER_URL = "https://www.googleapis.com/urlshortener/v1/url?key=%s&cx=%s"
+GOOGLE_BASE_URL = "www.google.com/search?q=%s"
 
 
 def _import_yaml_data(directory=os.curdir):
@@ -45,9 +45,10 @@ def _googling(args, is_google):
         result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
         if is_google:
             result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
-            shortReq = requests.get(SHORTENER_URL % urllib.quote(GOOGLE_BASE_URL % args.encode('utf-8')))
+            payload = {"longUrl": GOOGLE_BASE_URL % args.encode('utf-8')}
+            shortReq = requests.post(SHORTENER_URL % (settings['google']['key'], settings['google']['cx']), data=json.dumps(payload), headers={'Content-Type': 'application/json'})
             shortData = json.loads(shortReq.content)
-            result["shortURL"] = shortData['data']['url'].encode('utf-8')
+            result["shortURL"] = shortData['id'].encode('utf-8')
 
         return result
     except KeyError:
@@ -79,7 +80,7 @@ def command_yt(bot, user, channel, args):
     if len(items) == 0:
         bot.say(channel, "No results found.")
         return
-    
+
     entry = items[0]
 
     title = entry['snippet']['title'].encode('utf-8')
@@ -107,7 +108,7 @@ def command_animate(bot, user, channel, args):
     """Finds a gif for your query."""
     settings = _import_yaml_data()
     args = args.decode('utf-8')
-    
+
     if args[:3] == "me ":
         args = args[3:]
 
