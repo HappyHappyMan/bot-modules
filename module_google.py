@@ -82,7 +82,7 @@ def command_yt(bot, user, channel, args):
     
     entry = items[0]
 
-    title = entry['snippet']['title']
+    title = entry['snippet']['title'].encode('utf-8')
     id = entry['id']['videoId']
 
     bot.say(channel, '\x02YouTube search result\x02 \x034|\x03 {} \x034|\x03 https://youtube.com/watch?v={}'.format(
