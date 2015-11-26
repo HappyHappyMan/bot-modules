@@ -155,10 +155,14 @@ def command_reddit(bot, user, channel, args):
         return
 
     try:
-        if data['data']['children'][0]['data']['stickied'] is True:
-            topPost = data['data']['children'][1]['data']
-        else:
-            topPost = data['data']['children'][0]['data']
+        posts = data['data']['children']
+        if len(posts) < 1:
+            bot.say(channel, "This subreddit doesn't exist, sorry.")
+            return
+        for post in posts:
+            if post['data']['stickied'] is not True:
+                topPost = post['data']
+                break
     except IndexError:
         # I have to duplicate myself because apparently the json module
         # doesn't even know when json is or isn't valid html. 
