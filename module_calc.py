@@ -27,9 +27,20 @@ def command_wa(bot, user, channel, args):
 
     settings = _import_yaml_data()
 
-    api_url = "http://api.wolframalpha.com/v2/query?input=%s&appid=%s"
+    api_url = "http://api.wolframalpha.com/v2/query?input={}&appid={}"
+    validation_url = "http://api.wolframalpha.com/v2/validatequery?input={}&appid={}"
+    parsed_url = urllib.quote(args)
 
-    retdata = requests.get(api_url % (urllib.quote(args), settings['appid']))
+    # if the validation comes back false, we can just send back a response instead
+    # of crashing or silently erroring out
+    retdata = requests.get(validation_url.format(parsed_url, settings['appid']))
+    root = ET.fromstring(retdata.content)
+    
+    if root.attrib['success'] != "true":
+        bot.say(channel, "{}, WolframAlpha is unable to understand your query.".format(bot.factory.getNick(user)))
+        return
+
+    retdata = requests.get(api_url.format(parsed_url, settings['appid']))
     data = retdata.content
     root = ET.fromstring(data)
 
@@ -65,7 +76,7 @@ def command_wa(bot, user, channel, args):
     if len(answer) > 250:
         answer = answer[:250] + "..."
 
-    bot.say(channel, "WolframAlpha | %s = %s" % (question, answer))
+    bot.say(channel, "\x02WolframAlpha result\x02 \x02\x038|\x03\x02 %s \x02\x038|\x03\x02 %s" % (question, answer))
     return
 
 def command_calc(bot, user, channel, args):
