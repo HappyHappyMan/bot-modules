@@ -74,16 +74,22 @@ def command_btc(bot, user, channel, args):
     bot.say(channel, "1 btc is worth %s %s" % (rate.encode('utf-8'), conv[-3:]))
 
 def command_doge(bot, user, channel, args):
-    """This tells you how much a single dogecoin is worth in USD."""
+    """This tells you how much a single dogecoin is worth in whatever currency you want. Defaults to USD."""
     import json
-    data = requests.get("http://data.bter.com/api/1/ticker/doge_usd")
+    if not args:
+        args = "usd"
+    data = requests.get("https://chain.so/api/v2/get_price/DOGE/{}".format(args.upper()))
     j = json.loads(str(data.content.encode('utf-8')))
-    if j['result'] == "true":
-        amount = j['last']
+    if j['status'] == "success":
+        try:
+            amount = j["data"]["prices"][0]["price"]
+        except IndexError:
+            bot.say(channel, "Pricing information not available for this currency at this time.")
+            return
     else:
         bot.say(channel, "Try again later, something's wrong with the API.")
         return
-    bot.say(channel, "1 dogecoin is worth %s USD." % amount)
+    bot.say(channel, "1 dogecoin is worth {} {}.".format(amount, args.upper()))
     return
 
 def command_8ball(bot, user, channel, args):
