@@ -35,30 +35,6 @@ def command_roll(bot, user, channel, args):
         bot.say(channel, nick + ": You rolled a " + ', a '.join(map(str, arr[:-1])) + " and a " + str(arr[-1]) + " for a total of " + str(sum(arr)))
     return
 
-def command_changelog(bot, user, channel, args):
-    """Changelog!"""
-    import json
-
-    log.debug(args)
-    log.debug(type(args))
-    try:
-        args = int(args) - 1
-        log.debug("We have found an int! It is " + str(args))
-    except ValueError:
-        log.debug("There are no args!")
-        args = 0
-
-    r = requests.get("https://api.github.com/repos/SriRamanujam/bot-modules/commits")
-    j = json.loads(r.content.encode('utf-8'))
-
-
-    if args > 29:
-        args = 0
-
-    message = j[args]['commit']['message'].encode("utf-8")
-    bot.say(channel, "Changelog %s: %s" % (str(args + 1), message))
-
-
 def command_isup(bot, user, channel, args):
     """Give it a url, it will tell you if it's up or not."""
     import BeautifulSoup
