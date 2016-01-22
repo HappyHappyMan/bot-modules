@@ -59,7 +59,7 @@ def handle_userJoined(bot, user, channel):
                 bot.say(channel, "{}: You have multiple messages! Check your PMs to see them".format(
                         bot.factory.getNick(user)))
                 for tell in tells:
-                    bot.say(user, '{} left you a message: "{}"'.format(tell[0], tell[1]))
+                    bot.say(bot.factory.getNick(user), '{} left you a message: "{}"'.format(tell[0], tell[1]))
             elif len(tells) == 1:
                 bot.say(channel, '{}: {} left you this message: "{}"'.format(
                         bot.factory.getNick(user), tells[0][0], tells[0][1]))
