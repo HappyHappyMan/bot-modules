@@ -69,8 +69,8 @@ def command_wa(bot, user, channel, args):
         bot.say(channel, bot.factory.getNick(user) + ", " + root[0][0].attrib['text'])
 
     ## Search through for the question and answer
-    question = root.findall("*[@id='Input']")[0][0][0].text.encode('utf-8')
-    answer = root.findall("*[@primary]")[0][0][0].text.encode('utf-8')
+    question = root[0][0].find('plaintext').text
+    answer = root[1][0].find('plaintext').text
 
     ## truncates response if it's too long so we avoid getting floodkicked.
     if len(answer) > 250:
