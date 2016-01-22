@@ -17,7 +17,7 @@ except ImportError as e:
 GOOGLE_URL = "https://www.googleapis.com/customsearch/v1?key=%s&cx=%s&q=%s"
 SHORTENER_URL = "https://www.googleapis.com/urlshortener/v1/url?key=%s&cx=%s"
 GOOGLE_BASE_URL = "www.google.com/search?q=%s"
-
+GOOGLE_KG_URL = "https://kgsearch.googleapis.com/v1/entities:search?query=%s&key=%s&limit=1&indent=True"
 
 def _import_yaml_data(directory=os.curdir):
     try:
@@ -33,6 +33,34 @@ class GoogleError(Exception):
     def __str__(self):
         return repr(self.value)
 
+def _get_shorturl(args):
+    settings = _import_yaml_data()
+    payload = {"longUrl": GOOGLE_BASE_URL % args.encode('utf-8')}
+    shortReq = requests.post(SHORTENER_URL % (settings['google']['key'], settings['google']['cx']), data=json.dumps(payload), headers={'Content-Type': 'application/json'})
+    shortData = json.loads(shortReq.content)
+    return shortData['id'].encode('utf-8')
+
+
+def _kgsearch(args):
+    settings = _import_yaml_data()
+    args = args.decode('utf-8')
+    request = requests.get(GOOGLE_KG_URL % (args, settings['google']['key']))
+    j = request.json()
+    if len(j['itemListElement']) > 0:
+        item = j['itemListElement'][0]['result']
+        name = item['name']
+        blurb = item['detailedDescription']['articleBody']
+        blurb_src = item['detailedDescription']['url']
+        if 'url' in item.keys():
+            item_url = item['url']
+        else:
+            item_url = ""
+        shorturl = _get_shorturl(args)
+
+        resultstr = "\x02Google search result for {}\x02 \x02\x0312|\x03\x02 {} · {} \x02\x0312|\x03\x02 {} \x02\x0312\x03\x02 More results: {}".format(name, blurb, blurb_src, item_url, shorturl)
+        return resultstr.decode('utf-8').encode('utf-8')
+    else:
+        return False
 
 def _googling(args, is_google):
     settings = _import_yaml_data()
@@ -43,16 +71,29 @@ def _googling(args, is_google):
     try:
         result["url"] = urllib.unquote(json1['items'][0]['link'].encode('utf-8'))
         result["name"] = HTMLParser.HTMLParser().unescape(json1['items'][0]['title'].encode('utf-8'))
-        if is_google:
-            result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
-            payload = {"longUrl": GOOGLE_BASE_URL % args.encode('utf-8')}
-            shortReq = requests.post(SHORTENER_URL % (settings['google']['key'], settings['google']['cx']), data=json.dumps(payload), headers={'Content-Type': 'application/json'})
-            shortData = json.loads(shortReq.content)
-            result["shortURL"] = shortData['id'].encode('utf-8')
-
-        return result
     except KeyError:
-        raise GoogleError('No results found')
+        raise GoogleError("No results found")
+
+    if is_google:
+        result["snippet"] = json1['items'][0]['snippet'].encode('utf-8')
+        result["shortURL"] = _get_shorturl(args)
+
+        str_len = 300
+        text_len = 41 + sum([len(result[item]) for item in result])
+        if text_len > str_len:
+            result['snippet'] = result['snippet'][:-(text_len - str_len)]
+            trunclen = len(result['snippet']) - 1
+            while True:
+                if result['snippet'][trunclen] == " ":
+                    break
+                else:
+                    trunclen = trunclen - 1
+                    continue
+            result['snippet'] = result['snippet'][:trunclen] + "..."
+        
+        resultstr = "\x02Google search result for {}\x02 \x02\x0312|\x03\x02 {} · {} \x02\x0312|\x03\x02 {} \x02\x0312|\x02\x03 More results: {}".format(
+                args, result['name'], result['snippet'], result['url'], result['shortURL'])
+        return resultstr
 
 def command_yt(bot, user, channel, args):
     """Searches youtube for your search. What else would it do?"""
@@ -125,35 +166,18 @@ def command_animate(bot, user, channel, args):
 def command_google(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
     try:
-        result_dict = _googling(args, True)
+        result = _kgsearch(args)
+        if result == False:
+            result = _googling(args, True)
     except GoogleError:
         bot.say(channel, "No results found.")
         return
 
-    str_len = 300
-    text_len = 41 + sum([len(result_dict[item]) for item in result_dict])
-    if text_len > str_len:
-        result_dict['snippet'] = result_dict['snippet'][:-(text_len - str_len)]
-        trunclen = len(result_dict['snippet']) - 1
-        while True:
-            if result_dict['snippet'][trunclen] == " ":
-                break
-            else:
-                trunclen = trunclen - 1
-                continue
-        result_dict['snippet'] = result_dict['snippet'][:trunclen] + "..."
-
-    if channel == user:
-        channel = usersplit
-
-    bot.say(channel, "%s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 %s \x02\x0312|\x03\x02 More results: %s" % (result_dict['name'], result_dict['snippet'], result_dict['url'], result_dict['shortURL']))
+    bot.say(channel, result)
     return
-
 
 def command_g(bot, user, channel, args):
-    command_google(bot, user, channel, args)
-    return
-
+    return command_google(bot, user, channel, args)
 
 def command_lucky(bot, user, channel, args):
     usersplit = user.split('!', 1)[0]
@@ -170,5 +194,5 @@ def command_lucky(bot, user, channel, args):
     return
 
 def command_l(bot, user, channel, args):
-    command_lucky(bot, user, channel, args)
-    return
+    return command_lucky(bot, user, channel, args)
+
