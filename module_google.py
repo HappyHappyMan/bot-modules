@@ -49,8 +49,11 @@ def _kgsearch(args):
     if len(j['itemListElement']) > 0:
         item = j['itemListElement'][0]['result']
         name = item['name']
-        blurb = item['detailedDescription']['articleBody']
-        blurb_src = item['detailedDescription']['url']
+        try:
+            blurb = item['detailedDescription']['articleBody']
+            blurb_src = item['detailedDescription']['url']
+        except KeyError:
+            return _googling(args, True)
         if 'url' in item.keys():
             item_url = item['url']
         else:
@@ -122,7 +125,13 @@ def command_yt(bot, user, channel, args):
         bot.say(channel, "No results found.")
         return
 
-    entry = items[0]
+    for item in items:
+        if item['id']['kind'] == "youtube#video":
+            entry = item
+            break
+    else:
+        bot.say(channel, "No results found.")
+        return
 
     title = entry['snippet']['title'].encode('utf-8')
     id = entry['id']['videoId']
