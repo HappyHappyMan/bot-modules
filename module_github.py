@@ -30,7 +30,7 @@ def _create_github_issue(bot, user, channel, args, is_feature_req):
     tag = ['feature-request'] if is_feature_req else ['bug-report']
 
     # add additional information to the body
-    body = "{} <{}> ({}) {}:\n\n".format(
+    body = "{} {} ({}) {}:\n\n".format(
             "Feature request from" if is_feature_req else "Issue reported by",
             bot.factory.getNick(user), user, 
             "in channel {}".format(channel) if channel.startswith('#') else 'via PM' ) + body
