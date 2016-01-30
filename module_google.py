@@ -97,6 +97,8 @@ def _googling(args, is_google):
         resultstr = "\x02Google search result for {}\x02 \x02\x0312|\x03\x02 {} · {} \x02\x0312|\x03\x02 {} \x02\x0312|\x02\x03 More results: {}".format(
                 args, result['name'], result['snippet'], result['url'], result['shortURL'])
         return resultstr
+    else:
+        return result
 
 def command_yt(bot, user, channel, args):
     """Searches youtube for your search. What else would it do?"""
