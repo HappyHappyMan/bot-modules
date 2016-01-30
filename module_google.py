@@ -48,20 +48,20 @@ def _kgsearch(args):
     j = request.json()
     if len(j['itemListElement']) > 0:
         item = j['itemListElement'][0]['result']
-        name = item['name']
+        name = item['name'].encode('utf-8')
         try:
-            blurb = item['detailedDescription']['articleBody']
-            blurb_src = item['detailedDescription']['url']
+            blurb = item['detailedDescription']['articleBody'].encode("utf-8")
+            blurb_src = item['detailedDescription']['url'].encode('utf-8')
         except KeyError:
             return _googling(args, True)
         if 'url' in item.keys():
             item_url = item['url']
         else:
             item_url = ""
-        shorturl = _get_shorturl(args)
+        shorturl = _get_shorturl(args).encode('utf-8')
 
         resultstr = "\x02Google search result for {}\x02 \x02\x0312|\x03\x02 {} · {} \x02\x0312|\x03\x02 {} \x02\x0312\x03\x02 More results: {}".format(name, blurb, blurb_src, item_url, shorturl)
-        return resultstr.decode('utf-8').encode('utf-8')
+        return resultstr
     else:
         return False
 
