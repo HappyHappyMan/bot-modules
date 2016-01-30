@@ -117,62 +117,6 @@ def command_np(bot, user, channel, args):
         return
 
 
-def command_compare(bot, user, channel, args):
-    """Compares your last.fm tasteometer rating with somebody else's."""
-
-    settings = _import_yaml_data()
-    db = dbHandler(bot.factory.getDBPath())
-
-    COMPARE_URL = "http://ws.audioscrobbler.com/2.0/?method=tasteometer.compare&type1=user&type2=user&value1=%s&value2=%s&api_key=%s&limit=4"
-
-    compare_nick = args.split(" ")[0].strip()  # Ensure only one nick gets processed
-    lastid = db.get("lastfm", compare_nick.strip())
-    yourid = db.get("lastfm", user.strip())
-
-    ## Handles the two possible ways a user couldn't exist to be compared with.
-    if lastid is None:
-        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % args.split(" ")[0])
-        return
-    if yourid is None:
-        bot.say(channel, "User \x02%s\x02 doesn't exist in my db! They should look into that." % bot.factory.getNick())
-        return
-    else:
-        import math  # Yeah, yeah, whatever
-        call_url = COMPARE_URL % (lastid, yourid, settings["lastfm"]["key"])
-        xmlreturn = requests.get(call_url)
-        data = xmlreturn.content
-        tree = ET.fromstring(data)
-
-        ## A particularly innovative way to round the float they send back to two
-        ## decimal places. Nobody tell past me about math.round().
-        number = math.ceil(float(tree[0][0][0].text) * 1000) / 1000 * 100
-
-        matches = int(tree[0][0][1].attrib['matches'])  # extracts the common artists
-        artistList = []
-
-        ## Puts the top 4 common artists into a list.
-        if matches < 4:
-            for i in range(matches):
-                artistList.append(tree[0][0][1][i][0].text)
-        else:
-            for i in range(4):
-                artistList.append(tree[0][0][1][i][0].text)
-
-        simString = "Similar artists include: "
-        ## Formats the common artist list slightly better than a map() would, by
-        ## being smart enough to not add a comma to the last entry.
-        for r in range(len(artistList)):
-            if (r + 1) == len(artistList):
-                simString = simString + artistList[r]
-            else:
-                simString = simString + artistList[r] + ", "
-
-        bot.say(channel, "Last.fm \x034\x02|\x02\x03 Users \x02%s\x02 and \x02%s\x02 have similarity %s%% \x034\x02|\x02\x03 %s" % 
-                (lastid.encode('utf-8'), yourid.encode('utf-8'), number,
-                 simString.encode('utf-8')))
-        return
-
-
 def command_charts(bot, user, channel, args):
     """Gets yours or somebody else's top five artists over the last week"""
     settings = _import_yaml_data()
