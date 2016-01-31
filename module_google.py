@@ -143,6 +143,7 @@ def command_yt(bot, user, channel, args):
 
 
 def command_gis(bot, user, channel, args):
+    """Searches google images."""
     settings = _import_yaml_data()
     args = args.decode('utf-8')
 
@@ -175,6 +176,7 @@ def command_animate(bot, user, channel, args):
         bot.say(channel, "No results found.")
 
 def command_google(bot, user, channel, args):
+    """Searches google for the thing you asked it to search for."""
     usersplit = user.split('!', 1)[0]
     try:
         result = _kgsearch(args)
@@ -188,9 +190,11 @@ def command_google(bot, user, channel, args):
     return
 
 def command_g(bot, user, channel, args):
+    """Searches google for the thing you asked it to search for."""
     return command_google(bot, user, channel, args)
 
 def command_lucky(bot, user, channel, args):
+    """Gives you the first google result for the thing you searched for."""
     usersplit = user.split('!', 1)[0]
     try:
         result_dict = _googling(args, False)
@@ -205,5 +209,6 @@ def command_lucky(bot, user, channel, args):
     return
 
 def command_l(bot, user, channel, args):
+    """Gives you the first google result for the thing you searched for."""
     return command_lucky(bot, user, channel, args)
 
