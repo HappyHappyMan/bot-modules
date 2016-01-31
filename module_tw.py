@@ -42,16 +42,37 @@ def _handle_tweet(tweets):
     return tweet
 
 def command_tws(bot, user, channel, args):
-    """
-    Performs a search on the twitter api, and returns the most relevant (as judged by Twitter) tweet.
-    """
+    """Searches and returns the most relevant (as judged by Twitter) tweet for your query. This function supports all the query operators described at https://dev.twitter.com/rest/public/search under the section "Query operators"."""
+    search_url = "https://api.twitter.com/1.1/search/tweets.json"
+    params = {'q': args}
+    auth = _get_twitter_auth()
+    r = requests.get(search_url, params=params, auth=auth)
 
-    pass
+    if r.status_code != requests.codes.ok:
+        bot.say(channel, "{}: Invalid query".format(bot.factory.getNick(user)))
+        return
+
+    results = r.json()
+    try:
+        tweet = results['statuses'][0]
+    except IndexError:
+        bot.say(channel, "No tweets found for search query {}.".format(args))
+    time = tweet['created_at']
+    name = tweet['user']['name']
+    user = tweet['user']['screen_name']
+    text = tweet['text']
+    id = tweet['id']
+
+    log.debug("user is %s", user)
+
+    tweetstr = u"Most relevant tweet for query \x02{0}\x02 by \x02{1}\x02 (\x02@{2}\x02) \x02\x0310|\x03\x02 {3} \x02\x0310|\x03\x02 https://twitter.com/{2}/status/{4} \x02\x0310|\x03\x02 {5}"
+
+    thingy = tweetstr.format(args.decode('utf-8'), name, user, text, id, time)
+    bot.say(channel, thingy.encode('utf-8'))
+    return
 
 def command_tw(bot, user, channel, args):
-    """
-    Gets the most recent tweet tweeted by a twitter tweeter
-    """
+    """Gets the most recent tweet tweeted by a twitter tweeter"""
     tweet_url = "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name={}"
 
     auth = _get_twitter_auth()
