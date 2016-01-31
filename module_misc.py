@@ -120,11 +120,20 @@ def command_8ball(bot, user, channel, args):
     return
 
 def command_horoscope(bot, user, channel, args):
-    import json
-    data = requests.get("http://widgets.fabulously40.com/horoscope.json?sign={}".format(args))
-    j = json.loads(data.content)
+    try:
+        from lxml import etree
+    except ImportError as e:
+        log.error("Module not found: %s", e)
+        return
+    data = requests.get("http://www.findyourfate.com/rss/dailyhoroscope-feed.asp?sign={}".format(args.title()))
+    root = etree.fromstring(data.content)
 
-    if "horoscope" in j.keys():
-        bot.say(channel, "{}: {}".format(bot.factory.getNick(user), j["horoscope"]["horoscope"].encode('utf-8')))
-    else:
+    descs = root.xpath("//description")
+    if len(descs) != 2:
         bot.say(channel, "{}: Sign not found".format(bot.factory.getNick(user)))
+        return
+    else:
+        desc = descs[1].text
+    bot.say(channel, "{}: Your personal horoscope for {} | {}".format(bot.factory.getNick(user), args.title(), desc))
+    return
+
