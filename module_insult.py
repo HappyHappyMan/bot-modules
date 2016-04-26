@@ -304,6 +304,7 @@ def _tumblr_insult(args):
 def _banal_insult(nick, args):
     """Bringing back the old insults."""
     import linecache
+    import os
 
     def file_len(fname):
         with open(fname) as f:
@@ -311,8 +312,9 @@ def _banal_insult(nick, args):
                 pass
             return i+1
 
-    linecount = file_len("/home/sri/bots/testbot/modules/insults.txt")
-    insult_line = linecache.getline("/home/sri/bots/testbot/modules/insults.txt", random.randint(0, linecount))
+    insults_path = os.getcwd() + "/modules/insults.txt"
+    linecount = file_len(insults_path)
+    insult_line = linecache.getline(insults_path, random.randint(0, linecount))
 
     return_line = str(args) + ", " + str(nick) + " would like you to know that " + str(insult_line)
 
