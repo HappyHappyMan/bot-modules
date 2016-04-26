@@ -2,7 +2,7 @@
 
 import logging
 import json
-from modules.dbHandler import dbHandler
+from modules.dbHandler import dbHandler, IDNotFoundError
 
 log = logging.getLogger('tell')
 
