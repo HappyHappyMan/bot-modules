@@ -104,11 +104,13 @@ def command_yt(bot, user, channel, args):
     """Searches youtube for your search. What else would it do?"""
     settings = _import_yaml_data()
     gdata_url = "https://www.googleapis.com/youtube/v3/search"
+    ginfo_url = "https://www.googleapis.com/youtube/v3/videos"
 
     args = args.decode('utf-8')
 
     params = {'part': 'snippet',
                 'q': args,
+		'maxResults' : 1,
                 'key': settings['google']['key'],
                 'safesearch': 'none'}
 
@@ -135,11 +137,29 @@ def command_yt(bot, user, channel, args):
         bot.say(channel, "No results found.")
         return
 
+
     title = entry['snippet']['title'].encode('utf-8')
     id = entry['id']['videoId']
 
-    bot.say(channel, '\x02YouTube search result\x02 \x034|\x03 {} \x034|\x03 https://youtube.com/watch?v={}'.format(
-        title, id))
+    params2 = {'part' : 'contentDetails,statistics',
+               'id' : id,
+               'fields' : 'items/statistics,items/contentDetails',
+               'key' : settings['google']['key'] }
+
+    r2 = requests.get(ginfo_url, params=params2)
+    if not r2.status_code == 200:
+        error = r2.json().get('error')
+        if error:
+            log.warning("Youtube API Error: {}".format(error))
+        else:
+            log.warning("Youtube API Error: {}".format(r2.status_code))
+        return
+
+    views = "{:,}".format(int(r2.json()['items'][0]['statistics']['viewCount']))
+    length = r2.json()['items'][0]['contentDetails']['duration'][2:].lower()
+
+    bot.say(channel, '\x02YouTube search result\x02 \x034|\x03 {} \x034|\x03 https://youtube.com/watch?v={} \x034|\x03 {} views \x034|\x03 {}'.format(
+        title, id, views, length))
 
 
 def command_gis(bot, user, channel, args):

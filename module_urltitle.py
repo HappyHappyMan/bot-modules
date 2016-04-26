@@ -297,8 +297,13 @@ def _handle_youtube_gdata(url):
     if not match:
         match = re.match("https?://.*?youtube.com/watch\?.*?v=([^&]+)", url)
     if match:
-        log.debug("We've found a youtube url match")
-        params = {'id': match.group(1),
+	try:
+            thing = match.group(1)
+	    yt_index = thing.index('?')
+            yt_id = thing[:yt_index]
+        except ValueError:
+            yt_id = match.group(1)
+        params = {'id': yt_id,
                    'part': 'snippet,contentDetails,statistics',
                    'fields': 'items(id,snippet,contentDetails,statistics)',
                    'key': settings['google']['key']}
@@ -307,18 +312,16 @@ def _handle_youtube_gdata(url):
         if not r.status_code == 200:
             error = r.json().get('error')
             if error:
-                error = '{}: {}'.format(error['code'], error['message'])
+                log.warning("Youtube API Error: {}".format(error))
             else:
-                error = r.status_code
-                log.warning('Youtube API error: {}'.format(error))
-                return
+                log.warning("Youtube API Error: {}".format(r2.status_code))
+            return
 
         items = r.json()['items']
         if len(items) == 0: return
         entry = items[0]
 
         author = entry['snippet']['channelTitle']
-        #stars = int(round(rating)) * "*"
         try:
             views = "{:,}".format(int(entry['statistics']['viewCount']))
         except KeyError:
