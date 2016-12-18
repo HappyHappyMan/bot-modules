@@ -425,7 +425,7 @@ def __handle_reddit_comment_permalink(content):
     if textLen > maxLen:
         truncLen = maxLen - textLen
         while True:
-            if body[trunclen] == " ":
+            if body[truncLen] == " ":
                 break
             else:
                 truncLen = truncLen - 1
