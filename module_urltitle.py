@@ -461,7 +461,7 @@ def __handle_reddit_content(content):
 def _handle_reddit_2(url):
     """*redd.it/*"""
 
-    match = re.search(r"(?<=it/)[a-z1-9]+", url)
+    match = re.search(r"(?<=it/)[a-z0-9]+", url)
 
     info_url = "http://www.reddit.com/api/info.json?id=t3_%s"
 
