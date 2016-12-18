@@ -76,7 +76,7 @@ def command_wa(bot, user, channel, args):
     if len(answer) > 250:
         answer = answer[:250] + "..."
 
-    bot.say(channel, "\x02WolframAlpha result\x02 \x02\x038|\x03\x02 %s \x02\x038|\x03\x02 %s" % (question, answer))
+    bot.say(channel, "\x02WolframAlpha result\x02 \x02\x038|\x03\x02 %s \x02\x038|\x03\x02 %s" % (question.encode('utf-8'), answer.encode('utf-8')))
     return
 
 def command_calc(bot, user, channel, args):
