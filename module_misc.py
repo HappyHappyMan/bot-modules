@@ -78,11 +78,11 @@ def command_doge(bot, user, channel, args):
     import json
     if not args:
         args = "usd"
-    data = requests.get("https://chain.so/api/v2/get_price/DOGE/{}".format(args.upper()))
+    data = requests.get("https://api.cryptonator.com/api/ticker/doge-{}".format(args.lower()))
     j = json.loads(str(data.content.encode('utf-8')))
-    if j['status'] == "success":
+    if j['success'] == True:
         try:
-            amount = j["data"]["prices"][0]["price"]
+            amount = j['ticker']['price']
         except IndexError:
             bot.say(channel, "Pricing information not available for this currency at this time.")
             return
