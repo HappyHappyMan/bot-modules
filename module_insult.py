@@ -316,7 +316,7 @@ def _banal_insult(nick, args):
     linecount = file_len(insults_path)
     insult_line = linecache.getline(insults_path, random.randint(0, linecount))
 
-    return_line = str(args) + ", " + str(nick) + " would like you to know that " + str(insult_line)
+    return_line = str(args).strip() + ", " + str(nick) + " would like you to know that " + str(insult_line)
 
     return return_line
 
