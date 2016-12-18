@@ -137,3 +137,15 @@ def command_horoscope(bot, user, channel, args):
     bot.say(channel, "{}: Your personal horoscope for {} | {}".format(bot.factory.getNick(user), args.title(), desc))
     return
 
+def command_imdb(bot, user, channel, args):
+    """Give it a movie title and it'll search imdb"""
+    import urllib
+    data = requests.get("http://omdbapi.com/?t={}&y=&plot=short&r=json".format(urllib.quote(args)))
+    j = data.json()
+    if j['Response'] == "True":
+        bot.say(channel, "{} ({}) | {} | Rated {}, released {} | Metascore: {} | http://www.imdb.com/title/{}/".format(
+            j['Title'], j['Year'], j['Plot'], j['Rated'], j['Released'], j['Metascore'], j['imdbID']))
+    else:
+        bot.say(channel, 'Movie "{}" not found. Check for typos, or try being more specific.'.format(args))
+    return
+
