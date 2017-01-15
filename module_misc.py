@@ -144,8 +144,8 @@ def command_imdb(bot, user, channel, args):
     j = data.json()
     if j['Response'] == "True":
         bot.say(channel, "{} ({}) | {} | Rated {}, released {} | Metascore: {} | http://www.imdb.com/title/{}/".format(
-            j['Title'], j['Year'], j['Plot'], j['Rated'], j['Released'], j['Metascore'], j['imdbID']))
+            j['Title'].encode('utf-8'), j['Year'].encode('utf-8'), j['Plot'].encode('utf-8'), j['Rated'].encode('utf-8'), j['Released'].encode('utf-8'), j['Metascore'].encode('utf-8'), j['imdbID'].encode('utf-8')))
     else:
-        bot.say(channel, 'Movie "{}" not found. Check for typos, or try being more specific.'.format(args))
+        bot.say(channel, '"{}" not found. Check for typos, or try being more specific.'.format(args))
     return
 
