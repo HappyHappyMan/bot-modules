@@ -47,6 +47,8 @@ def _kgsearch(args):
     request = requests.get(GOOGLE_KG_URL % (args, settings['google']['key']))
     j = request.json()
     if len(j['itemListElement']) > 0:
+        if j['itemListElement'][0]['result'] < 700:
+            return False
         item = j['itemListElement'][0]['result']
         name = item['name'].encode('utf-8')
         try:
