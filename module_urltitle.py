@@ -390,7 +390,7 @@ def _handle_reddit(url):
         ending = "/.json"
     else:
         ending = ".json"
-    json_url = url + ending
+    json_url = url + ending + "?raw_json=1"
 
     headers_lib = {}
     headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"
@@ -477,7 +477,7 @@ def _handle_reddit_user(url):
     """*reddit.com/user/*"""
 
     match = re.search(r"(?<=user/)[\w'_-]+", url)
-    info_url = "http://www.reddit.com/user/%s/about.json"
+    info_url = "http://www.reddit.com/user/%s/about.json?raw_json=1"
 
     headers_lib = {}
     headers_lib["User-Agent"] = "Lazybot/Claire by Happy_Man"

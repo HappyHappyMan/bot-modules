@@ -104,7 +104,7 @@ def command_user(bot, user, channel, args):
         if args[1] in ['comments', 'submitted']:
             request_url = "http://www.reddit.com/user/%s/%s/.json" % (args[0], args[1])
             if args[2] in ['hour', 'day', 'week', 'month', 'year', 'all']:
-                request_url = "http://www.reddit.com/user/%s/%s/.json?t=%s&sort=top&limit=1" % (args[0], args[1], args[2])
+                request_url = "http://www.reddit.com/user/%s/%s/.json?t=%s&sort=top&limit=1&raw_json=1" % (args[0], args[1], args[2])
         else:
             request_url = "http://www.reddit.com/user/%s/about.json" % (args[0])
     except IndexError:
@@ -130,13 +130,13 @@ def command_reddit(bot, user, channel, args):
 
     try:
         if args[1] in ["hour", "day", "week", "month", "year", "all"]:
-            request_url = "http://www.reddit.com/r/%s/top/.json?t=%s" % (args[0], args[1])
+            request_url = "http://www.reddit.com/r/%s/top/.json?t=%s&raw_json=1" % (args[0], args[1])
             time_flag = True
         else:
-            request_url = "http://www.reddit.com/r/%s/.json" % (args[0])
+            request_url = "http://www.reddit.com/r/%s/.json?raw_json=1" % (args[0])
             time_flag = False
     except IndexError:
-        request_url = "http://www.reddit.com/r/%s/.json" % (args[0])
+        request_url = "http://www.reddit.com/r/%s/.json?raw_json=1" % (args[0])
         time_flag = False
 
     data = requests.get(request_url, headers=headers)
